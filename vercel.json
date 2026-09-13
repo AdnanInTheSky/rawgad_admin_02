@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/api/status", "destination": "/api/inventory.js?status=true" },
+    { "source": "/api/inventory/(.*)", "destination": "/api/inventory.js" },
+    { "source": "/api/inventory", "destination": "/api/inventory.js" },
+    { "source": "/api/orders/(.*)", "destination": "/api/orders.js" },
+    { "source": "/api/orders", "destination": "/api/orders.js" }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "rawgad-admin-cms",
+  "version": "1.0.0",
+  "description": "Rawgad Admin CMS - Inventory & Order Management",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "mongodb": "^6.3.0"
+  }
+}

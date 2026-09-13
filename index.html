@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rawgad Admin CMS — Inventory & Orders</title>
+  <meta name="robots" content="noindex,nofollow">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Alpine.js CDN -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    [x-cloak] { display: none !important; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    
+    .inp {
+      width: 100%;
+      border: 1px solid #e5e5e5;
+      border-radius: 0.75rem;
+      padding: 0.55rem 0.85rem;
+      font-size: 0.8rem;
+      background: #fafafa;
+      outline: none;
+      transition: all 0.15s;
+    }
+    .inp:focus {
+      border-color: #000;
+      background: #fff;
+      box-shadow: 0 0 0 1px #000;
+    }
+    
+    label.lbl {
+      display: block;
+      font-size: 0.65rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #737373;
+      margin-bottom: 0.35rem;
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.55rem 1rem;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: 1px solid transparent;
+      line-height: 1.2;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-p { background: #000; color: #fff; }
+    .btn-p:hover:not(:disabled) { background: #262626; }
+    .btn-o { background: #fff; color: #000; border-color: #d4d4d4; }
+    .btn-o:hover:not(:disabled) { border-color: #000; background: #fafafa; }
+    .btn-d { background: #fff; color: #dc2626; border-color: #fecaca; }
+    .btn-d:hover:not(:disabled) { background: #fef2f2; border-color: #ef4444; }
+    .btn-s { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+    .btn-s:hover:not(:disabled) { background: #d1fae5; }
+    
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.62rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      border: 1px solid #e5e5e5;
+      background: #f5f5f5;
+      color: #404040;
+      white-space: nowrap;
+    }
+    
+    .nav-i {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      width: 100%;
+      text-align: left;
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.7rem 0.9rem;
+      border-radius: 0.75rem;
+      color: #a3a3a3;
+      cursor: pointer;
+      border: 1px solid transparent;
+      background: transparent;
+      transition: all 0.15s;
+    }
+    .nav-i:hover { color: #fff; background: #171717; }
+    .nav-i.on { color: #fff; background: #171717; border-color: #262626; }
+    
+    .card {
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 1.25rem;
+    }
+    
+    table.tbl { width: 100%; font-size: 0.75rem; border-collapse: collapse; }
+    table.tbl th {
+      font-size: 0.62rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #737373;
+      text-align: left;
+      padding: 0.65rem 0.85rem;
+      border-bottom: 1px solid #e5e5e5;
+      white-space: nowrap;
+      background: #fafafa;
+    }
+    table.tbl td {
+      padding: 0.75rem 0.85rem;
+      border-bottom: 1px solid #f5f5f5;
+      vertical-align: middle;
+    }
+    table.tbl tr:hover td { background: #fafafa; }
+    
+    .modal-bg { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(2px); z-index: 60; }
+    .modal { position: fixed; inset: 0; z-index: 70; display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 2rem 1rem; }
+    
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 90;
+      background: #000;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.85rem 1.4rem;
+      border-radius: 0.9rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      max-width: 420px;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+  </style>
+</head>
+<body class="bg-neutral-100 text-neutral-900 min-h-screen" x-data="adminApp()" x-init="init()" x-cloak>
+
+  <!-- ================= APP SHELL ================= -->
+  <div class="min-h-screen flex">
+    
+    <!-- Sidebar -->
+    <aside class="w-64 flex-shrink-0 bg-black text-neutral-400 flex flex-col min-h-screen sticky top-0 h-screen border-r border-neutral-900">
+      <div class="p-6 border-b border-neutral-900">
+        <div class="flex items-center gap-2">
+          <div class="w-3 h-3 bg-white rounded-sm"></div>
+          <span class="font-black text-xl tracking-widest text-white">RAWGAD</span>
+        </div>
+        <div class="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-500 mt-1.5">Admin CMS &bull; Mongo &bull; Catalog</div>
+      </div>
+
+      <nav class="p-4 space-y-1.5 flex-grow overflow-y-auto">
+        <button class="nav-i" :class="view === 'dash' && 'on'" @click="view = 'dash'">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+          Dashboard
+        </button>
+
+        <button class="nav-i" :class="view === 'inventory' && 'on'" @click="view = 'inventory'">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+          Inventory
+          <span x-show="invSummary.outOfStock > 0" class="ml-auto bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full" x-text="invSummary.outOfStock"></span>
+        </button>
+
+        <button class="nav-i" :class="view === 'orders' && 'on'" @click="view = 'orders'">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+          Orders
+          <span x-show="pendingOrdersCount > 0" class="ml-auto bg-amber-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-full" x-text="pendingOrdersCount"></span>
+        </button>
+
+        <button class="nav-i" :class="view === 'settings' && 'on'" @click="view = 'settings'">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+          Settings
+        </button>
+      </nav>
+
+      <!-- Sidebar Footer: Status & Refresh -->
+      <div class="p-4 border-t border-neutral-900">
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-neutral-900 text-neutral-400 cursor-pointer hover:bg-neutral-800 transition-colors" @click="checkStatus(true)">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full" :class="dbConnected ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-red-500'"></span>
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-wider text-white" x-text="dbConnected ? 'paystationdemo' : 'Offline'"></div>
+              <div class="text-[9px] text-neutral-500" x-text="dbConnected ? 'Atlas Connected' : 'Check server'"></div>
+            </div>
+          </div>
+          <button class="text-neutral-500 hover:text-white text-xs" title="Refresh status">&#8635;</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow p-6 lg:p-10 max-w-[1400px] w-full mx-auto">
+
+      <!-- Server Warning Banner (if disconnected) -->
+      <div x-show="!dbConnected && !loadingStatus" class="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-900 rounded-2xl flex items-center justify-between text-xs font-semibold">
+        <div class="flex items-center gap-2">
+          <span class="text-red-600 font-bold">&#9888; Server Offline</span>
+          <span class="text-red-700 text-[11px]">&mdash; Unable to connect to MongoDB Atlas. Ensure Vercel Serverless Function / local backend is active.</span>
+        </div>
+        <button class="btn btn-o !py-1 !px-3 !text-[9px] !bg-white" @click="checkStatus(true)">&#8635; Retry</button>
+      </div>
+
+      <!-- ================= 1. DASHBOARD ================= -->
+      <section x-show="view === 'dash'">
+        <div class="flex items-start justify-between mb-6 flex-wrap gap-4">
+          <div>
+            <h1 class="text-2xl font-black tracking-tight">Store Dashboard</h1>
+            <p class="text-xs text-neutral-500 mt-1">Live overview from MongoDB Atlas (<span class="mono font-semibold">paystationdemo</span>) and public product catalog.</p>
+          </div>
+          <button class="btn btn-o" @click="fetchAll(true)">&#8635; Refresh Data</button>
+        </div>
+
+        <!-- Metric Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div class="card p-5">
+            <div class="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Total Orders</div>
+            <div class="text-3xl font-black mt-1" x-text="orders.length"></div>
+            <div class="text-[10px] text-neutral-500 mt-1 font-semibold" x-text="pendingOrdersCount + ' pending fulfillment'"></div>
+          </div>
+          <div class="card p-5">
+            <div class="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Gross Sales (BDT)</div>
+            <div class="text-3xl font-black mt-1" x-text="'BDT ' + fmtNum(totalRevenue)"></div>
+            <div class="text-[10px] text-neutral-500 mt-1 font-semibold" x-text="orders.filter(o => o.status === 'delivered').length + ' orders completed'"></div>
+          </div>
+          <div class="card p-5">
+            <div class="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Purchasable Items</div>
+            <div class="text-3xl font-black mt-1" x-text="inventory.length"></div>
+            <div class="text-[10px] text-neutral-500 mt-1 font-semibold" x-text="invSummary.inStock + ' currently in stock'"></div>
+          </div>
+          <div class="card p-5">
+            <div class="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Inventory Alerts</div>
+            <div class="text-3xl font-black mt-1" :class="(invSummary.outOfStock + invSummary.lowStock) > 0 ? 'text-amber-600' : 'text-emerald-600'" x-text="invSummary.outOfStock + invSummary.lowStock"></div>
+            <div class="text-[10px] text-neutral-500 mt-1 font-semibold" x-text="invSummary.outOfStock + ' out of stock &bull; ' + invSummary.lowStock + ' low stock'"></div>
+          </div>
+        </div>
+
+        <!-- Two Column Dashboard Grid -->
+        <div class="grid lg:grid-cols-2 gap-6">
+          <!-- Recent Orders -->
+          <div class="card p-6">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-xs font-black uppercase tracking-widest">Recent Orders</h2>
+              <button class="text-xs font-bold text-neutral-500 hover:text-black" @click="view = 'orders'">View all &rarr;</button>
+            </div>
+            <template x-if="orders.length === 0">
+              <p class="text-xs text-neutral-400 py-10 text-center font-bold uppercase tracking-wider">No orders found in database</p>
+            </template>
+            <div class="space-y-2">
+              <template x-for="o in orders.slice(0, 5)" :key="o.invoice_number || o._id">
+                <div class="flex items-center justify-between p-3 border border-neutral-100 rounded-xl hover:bg-neutral-50 cursor-pointer transition-colors" @click="openOrderModal(o)">
+                  <div>
+                    <div class="font-bold text-xs mono" x-text="o.invoice_number"></div>
+                    <div class="text-[11px] text-neutral-600 font-semibold" x-text="o.customer && o.customer.name"></div>
+                    <div class="text-[10px] text-neutral-400" x-text="o.totalItemsCount + ' item(s) &bull; ' + fmtDate(o.created_at)"></div>
+                  </div>
+                  <div class="text-right">
+                    <div class="font-black text-xs" x-text="'BDT ' + fmtNum(o.payment_amount)"></div>
+                    <span class="badge uppercase mt-1" :class="getOrderStatusBadgeClass(o.status)" x-text="o.status"></span>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Stock Alerts -->
+          <div class="card p-6">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-xs font-black uppercase tracking-widest">Stock Health & Alerts</h2>
+              <button class="text-xs font-bold text-neutral-500 hover:text-black" @click="view = 'inventory'; invFilter = 'out_of_stock'">Manage Inventory &rarr;</button>
+            </div>
+            <template x-if="alertInventoryItems.length === 0">
+              <div class="text-center py-10">
+                <span class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 inline-flex items-center justify-center font-black mb-2">&check;</span>
+                <p class="text-xs text-neutral-500 font-bold uppercase tracking-wider">All inventory levels are healthy</p>
+              </div>
+            </template>
+            <div class="space-y-2">
+              <template x-for="item in alertInventoryItems.slice(0, 5)" :key="item.key">
+                <div class="flex items-center justify-between p-3 border border-neutral-100 rounded-xl hover:bg-neutral-50 cursor-pointer transition-colors" @click="openStockModal(item)">
+                  <div class="flex items-center gap-3">
+                    <img :src="item.imageSrc || 'https://placehold.co/80x80/e2e8f0/64748b?text=Item'" class="w-9 h-9 rounded-lg object-cover bg-neutral-100 border border-neutral-200 flex-shrink-0" onerror="this.src='https://placehold.co/80x80/e2e8f0/64748b?text=Item'">
+                    <div>
+                      <div class="text-xs font-bold" x-text="item.productTitle"></div>
+                      <div class="text-[10px] text-neutral-500" x-text="(item.typeTitle ? item.typeTitle : '') + (item.subTitle ? ' &bull; ' + item.subTitle : '')"></div>
+                      <div class="text-[9px] mono text-neutral-400" x-text="item.productId"></div>
+                    </div>
+                  </div>
+                  <div class="text-right flex-shrink-0">
+                    <div class="font-black text-xs" :class="item.stock <= 0 ? 'text-red-600' : 'text-amber-600'" x-text="item.stock + ' in stock'"></div>
+                    <span class="badge mt-1" :class="item.stock <= 0 ? '!bg-red-50 !text-red-700 !border-red-200' : '!bg-amber-50 !text-amber-700 !border-amber-200'" x-text="item.stock <= 0 ? 'Out of Stock' : 'Low Stock'"></span>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 2. INVENTORY SECTION ================= -->
+      <section x-show="view === 'inventory'">
+        <!-- Inventory Top Bar -->
+        <div class="flex items-start justify-between mb-6 flex-wrap gap-4">
+          <div>
+            <h1 class="text-2xl font-black tracking-tight">Inventory Management</h1>
+            <p class="text-xs text-neutral-500 mt-1">
+              Authoritative MongoDB stock (<span class="mono font-semibold">inventory</span>) matched with catalog (<span class="mono font-semibold">products.json</span>).
+            </p>
+          </div>
+
+          <!-- Actions: Update Inventory & Refresh -->
+          <div class="flex items-center gap-3 flex-wrap">
+            <button 
+              class="btn btn-o" 
+              @click="fetchInventory(true)"
+              :disabled="loadingInventory"
+            >
+              <span x-show="!loadingInventory">&#8635; Refresh</span>
+              <span x-show="loadingInventory">Loading...</span>
+            </button>
+
+            <!-- UPDATE INVENTORY BUTTON -->
+            <button 
+              class="btn btn-p !bg-black hover:!bg-neutral-800 shadow-sm"
+              @click="syncInventory()"
+              :disabled="syncingInventory"
+              title="Fetch latest products.json, find missing purchasable items, and create them with stock 0"
+            >
+              <svg x-show="syncingInventory" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              <span x-show="!syncingInventory">&#8645; Update Inventory</span>
+              <span x-show="syncingInventory">Syncing Catalog...</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Search & Filter Controls -->
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <!-- Filter Pills -->
+          <div class="flex gap-2 flex-wrap items-center">
+            <button class="badge !py-1.5 !px-3 cursor-pointer" :class="invFilter === 'all' && '!bg-black !text-white !border-black'" @click="invFilter = 'all'">
+              All (<span x-text="inventory.length"></span>)
+            </button>
+            <button class="badge !py-1.5 !px-3 cursor-pointer" :class="invFilter === 'in_stock' && '!bg-black !text-white !border-black'" @click="invFilter = 'in_stock'">
+              In Stock (<span x-text="invSummary.inStock"></span>)
+            </button>
+            <button class="badge !py-1.5 !px-3 cursor-pointer" :class="invFilter === 'low_stock' && '!bg-black !text-white !border-black'" @click="invFilter = 'low_stock'">
+              Low Stock (<span x-text="invSummary.lowStock"></span>)
+            </button>
+            <button class="badge !py-1.5 !px-3 cursor-pointer" :class="invFilter === 'out_of_stock' && '!bg-black !text-white !border-black'" @click="invFilter = 'out_of_stock'">
+              Out of Stock (<span x-text="invSummary.outOfStock"></span>)
+            </button>
+            <button x-show="invSummary.unmatched > 0" class="badge !py-1.5 !px-3 cursor-pointer !bg-amber-100 !text-amber-800 !border-amber-300" :class="invFilter === 'unmatched' && '!bg-amber-600 !text-white !border-amber-600'" @click="invFilter = 'unmatched'">
+              Unmatched (<span x-text="invSummary.unmatched"></span>)
+            </button>
+          </div>
+
+          <!-- Search Input -->
+          <div class="w-full sm:w-72">
+            <input 
+              class="inp" 
+              placeholder="Search product, type, subproduct, ID..." 
+              x-model="invSearch"
+            >
+          </div>
+        </div>
+
+        <!-- Inventory Table Card -->
+        <div class="card overflow-x-auto">
+          <table class="tbl min-w-[980px]">
+            <thead>
+              <tr>
+                <th class="w-12">Item</th>
+                <th>Product Information</th>
+                <th>Type (Variant)</th>
+                <th>Subproduct</th>
+                <th>Catalog Price</th>
+                <th>Current Stock</th>
+                <th>Stock Status</th>
+                <th>Last Updated</th>
+                <th class="text-right">Manage Stock</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="item in filteredInventory" :key="item.key">
+                <tr :class="item.unmatched ? 'bg-amber-50/40' : ''">
+                  <!-- Thumbnail Image -->
+                  <td>
+                    <img 
+                      :src="item.imageSrc || 'https://placehold.co/80x80/e2e8f0/64748b?text=Item'" 
+                      class="w-10 h-10 rounded-lg object-cover bg-neutral-100 border border-neutral-200"
+                      onerror="this.src='https://placehold.co/80x80/e2e8f0/64748b?text=Item'"
+                    >
+                  </td>
+
+                  <!-- Product Name & ID -->
+                  <td>
+                    <div class="font-bold text-xs" x-text="item.productTitle"></div>
+                    <div class="text-[10px] mono text-neutral-400" x-text="'ID: ' + item.productId"></div>
+                    <template x-if="item.unmatched">
+                      <span class="badge !bg-amber-100 !text-amber-800 !border-amber-300 !text-[9px] mt-0.5">Unmatched in Catalog</span>
+                    </template>
+                  </td>
+
+                  <!-- Type Name & ID -->
+                  <td>
+                    <div class="font-semibold text-xs" x-text="item.typeTitle || '—'"></div>
+                    <div x-show="item.typeId" class="text-[10px] mono text-neutral-400" x-text="'Type ID: ' + item.typeId"></div>
+                  </td>
+
+                  <!-- Subproduct Name & ID -->
+                  <td>
+                    <div class="font-semibold text-xs" x-text="item.subTitle || '—'"></div>
+                    <div x-show="item.subProductId" class="text-[10px] mono text-neutral-400" x-text="'Sub ID: ' + item.subProductId"></div>
+                  </td>
+
+                  <!-- Price from Catalog -->
+                  <td class="font-bold text-xs" x-text="'BDT ' + fmtNum(item.price)"></td>
+
+                  <!-- Current Stock in MongoDB -->
+                  <td>
+                    <div class="text-sm font-black mono" :class="item.stock <= 0 ? 'text-red-600' : (item.stock <= 5 ? 'text-amber-600' : 'text-neutral-900')" x-text="item.stock"></div>
+                  </td>
+
+                  <!-- Status Badge -->
+                  <td>
+                    <span 
+                      class="badge uppercase" 
+                      :class="item.stock <= 0 ? '!bg-red-50 !text-red-700 !border-red-200' : (item.stock <= 5 ? '!bg-amber-50 !text-amber-700 !border-amber-200' : '!bg-emerald-50 !text-emerald-700 !border-emerald-200')"
+                      x-text="item.stock <= 0 ? 'Out of Stock' : (item.stock <= 5 ? 'Low Stock' : 'In Stock')"
+                    ></span>
+                  </td>
+
+                  <!-- Last Updated Time -->
+                  <td class="text-[11px] text-neutral-500 whitespace-nowrap" x-text="fmtDate(item.updatedAt)"></td>
+
+                  <!-- Quick Stock Actions & Edit Modal Button -->
+                  <td class="text-right whitespace-nowrap">
+                    <div class="inline-flex items-center gap-1.5">
+                      <button 
+                        class="btn btn-o !p-1.5 !text-[10px] !rounded-md" 
+                        title="Decrease stock by 1"
+                        :disabled="item.stock <= 0"
+                        @click="quickAdjustStock(item, -1)"
+                      >-1</button>
+                      <button 
+                        class="btn btn-o !p-1.5 !text-[10px] !rounded-md" 
+                        title="Increase stock by 1"
+                        @click="quickAdjustStock(item, 1)"
+                      >+1</button>
+                      <button 
+                        class="btn btn-o !p-1.5 !text-[10px] !rounded-md" 
+                        title="Increase stock by 5"
+                        @click="quickAdjustStock(item, 5)"
+                      >+5</button>
+                      <button 
+                        class="btn btn-p !py-1.5 !px-3 !text-[10px]" 
+                        @click="openStockModal(item)"
+                      >Set Stock</button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+
+          <div x-show="filteredInventory.length === 0" class="text-center py-16 text-neutral-400">
+            <p class="text-xs font-bold uppercase tracking-wider">No inventory items matched your filter or search.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 3. ORDERS SECTION ================= -->
+      <section x-show="view === 'orders'">
+        <!-- Orders Top Bar -->
+        <div class="flex items-start justify-between mb-6 flex-wrap gap-4">
+          <div>
+            <h1 class="text-2xl font-black tracking-tight">Customer Orders</h1>
+            <p class="text-xs text-neutral-500 mt-1">Authoritative orders from MongoDB Atlas (<span class="mono font-semibold">orders</span> collection).</p>
+          </div>
+          <button class="btn btn-o" @click="fetchOrders(true)">&#8635; Refresh Orders</button>
+        </div>
+
+        <!-- Filter & Search Controls -->
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <!-- Status Pills -->
+          <div class="flex gap-2 flex-wrap items-center">
+            <template x-for="st in ['all', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled']" :key="st">
+              <button 
+                class="badge !py-1.5 !px-3 cursor-pointer capitalize" 
+                :class="orderFilter === st && '!bg-black !text-white !border-black'" 
+                @click="orderFilter = st" 
+                x-text="st"
+              ></button>
+            </template>
+          </div>
+
+          <!-- Search Input -->
+          <div class="w-full sm:w-72">
+            <input 
+              class="inp" 
+              placeholder="Search invoice, customer, TrxID..." 
+              x-model="orderSearch"
+            >
+          </div>
+        </div>
+
+        <!-- Orders Table Card -->
+        <div class="card overflow-x-auto">
+          <table class="tbl min-w-[950px]">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Items Ordered</th>
+                <th>Total</th>
+                <th>Payment Method & Trx</th>
+                <th>Order Status</th>
+                <th>Order Date</th>
+                <th class="text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="order in filteredOrders" :key="order.invoice_number || order._id">
+                <tr>
+                  <!-- Invoice / Order ID -->
+                  <td>
+                    <div class="font-bold text-xs mono" x-text="order.invoice_number"></div>
+                  </td>
+
+                  <!-- Customer Name, Phone & Email -->
+                  <td>
+                    <div class="font-bold text-xs" x-text="order.customer && order.customer.name"></div>
+                    <div class="text-[10px] text-neutral-600 font-medium" x-text="order.customer && order.customer.phone"></div>
+                    <div class="text-[10px] text-neutral-400 truncate max-w-[150px]" x-text="order.customer && order.customer.email"></div>
+                  </td>
+
+                  <!-- Items Summary -->
+                  <td>
+                    <div class="font-bold text-xs" x-text="order.totalItemsCount + ' item(s)'"></div>
+                    <div class="text-[10px] text-neutral-400 truncate max-w-[200px]" x-text="(order.items || []).map(i => i.name).join(', ')"></div>
+                  </td>
+
+                  <!-- Payment Amount -->
+                  <td>
+                    <div class="font-black text-xs" x-text="'BDT ' + fmtNum(order.payment_amount)"></div>
+                  </td>
+
+                  <!-- Payment Method & TrxID -->
+                  <td>
+                    <div class="flex items-center gap-1.5">
+                      <span class="badge uppercase !font-black" :class="getPaymentBadgeClass(order.payment_method)" x-text="formatPaymentMethod(order.payment_method)"></span>
+                    </div>
+                    <template x-if="order.trx_id && order.payment_method !== 'cod'">
+                      <div class="text-[10px] mono text-neutral-600 mt-1 font-semibold" x-text="'TrxID: ' + order.trx_id"></div>
+                    </template>
+                    <template x-if="order.sender_number && order.payment_method !== 'cod'">
+                      <div class="text-[10px] text-neutral-500 mt-0.5" x-text="'Sender: ' + order.sender_number"></div>
+                    </template>
+                  </td>
+
+                  <!-- Status Badge -->
+                  <td>
+                    <span class="badge uppercase" :class="getOrderStatusBadgeClass(order.status)" x-text="order.status"></span>
+                  </td>
+
+                  <!-- Date -->
+                  <td class="text-[11px] text-neutral-500 whitespace-nowrap" x-text="fmtDate(order.created_at)"></td>
+
+                  <!-- Action -->
+                  <td class="text-right">
+                    <button class="btn btn-o !py-1.5 !px-3" @click="openOrderModal(order)">
+                      View Details &rarr;
+                    </button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+
+          <div x-show="filteredOrders.length === 0" class="text-center py-16 text-neutral-400">
+            <p class="text-xs font-bold uppercase tracking-wider">No orders found matching this filter.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 4. SETTINGS SECTION ================= -->
+      <section x-show="view === 'settings'">
+        <div class="mb-6">
+          <h1 class="text-2xl font-black tracking-tight">System & Catalog Architecture</h1>
+          <p class="text-xs text-neutral-500 mt-1">Decoupled single source of truth architecture details.</p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6 max-w-4xl">
+          <!-- Architecture Card -->
+          <div class="card p-6 space-y-4">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 bg-black rounded-full"></span>
+              <h2 class="text-xs font-black uppercase tracking-widest">Source of Truth Configuration</h2>
+            </div>
+            
+            <div class="space-y-3 text-xs">
+              <div class="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
+                <div class="lbl">Product Catalog Source (Public Site)</div>
+                <div class="font-bold mono text-neutral-900 text-[11px]">https://lit-alpha-five.vercel.app/products.json</div>
+                <div class="text-[10px] text-neutral-500 mt-1">Supplies titles, variant types, subProducts, descriptions, images, and prices. Never duplicates catalog records in MongoDB.</div>
+              </div>
+
+              <div class="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
+                <div class="lbl">Inventory & Order Store (MongoDB Atlas)</div>
+                <div class="font-bold text-neutral-900">Database: <span class="mono">paystationdemo</span></div>
+                <div class="text-[10px] text-neutral-500 mt-1">Collections: <span class="mono font-semibold">inventory</span>, <span class="mono font-semibold">orders</span></div>
+                <div class="text-[10px] text-neutral-500 mt-1">Unique compound index: <span class="mono font-semibold">productId + typeId + subProductId</span></div>
+              </div>
+
+              <div class="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
+                <div class="lbl">Environment Secrets</div>
+                <div class="font-bold text-emerald-700">Protected in Vercel Serverless Functions</div>
+                <div class="text-[10px] text-neutral-500 mt-1"><span class="mono font-semibold">MONGO_URI</span> is kept strictly server-side. The browser never connects directly to MongoDB.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions & Status -->
+          <div class="card p-6 space-y-4">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full" :class="dbConnected ? 'bg-emerald-500' : 'bg-red-500'"></span>
+              <h2 class="text-xs font-black uppercase tracking-widest">System Diagnostics</h2>
+            </div>
+
+            <div class="space-y-3 text-xs">
+              <div class="flex justify-between py-2 border-b border-neutral-100">
+                <span class="text-neutral-500">Atlas Cluster Connection</span>
+                <span class="font-bold" :class="dbConnected ? 'text-emerald-700' : 'text-red-600'" x-text="dbConnected ? 'Connected (Healthy)' : 'Disconnected'"></span>
+              </div>
+              <div class="flex justify-between py-2 border-b border-neutral-100">
+                <span class="text-neutral-500">Inventory Documents in DB</span>
+                <span class="font-bold mono" x-text="inventory.length"></span>
+              </div>
+              <div class="flex justify-between py-2 border-b border-neutral-100">
+                <span class="text-neutral-500">Total Customer Orders</span>
+                <span class="font-bold mono" x-text="orders.length"></span>
+              </div>
+              <div class="flex justify-between py-2 border-b border-neutral-100">
+                <span class="text-neutral-500">Catalog Purchasable Items</span>
+                <span class="font-bold mono" x-text="catalogTotalItems || '106'"></span>
+              </div>
+            </div>
+
+            <div class="pt-4 border-t border-neutral-100 space-y-2">
+              <button class="btn btn-p w-full" @click="syncInventory()" :disabled="syncingInventory">
+                &#8645; Run Catalog &bull; Inventory Sync
+              </button>
+              <button class="btn btn-o w-full" @click="checkStatus(true)">
+                &#8635; Ping MongoDB Serverless API
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ================= MODAL: EDIT STOCK ================= -->
+  <div x-show="stockModal.open" class="modal-bg" @click="closeStockModal()"></div>
+  <div x-show="stockModal.open" class="modal">
+    <div class="card w-full max-w-md p-6 relative" @click.away="closeStockModal()">
+      <!-- Close button -->
+      <button @click="closeStockModal()" class="absolute top-5 right-5 text-neutral-400 hover:text-black text-2xl leading-none">&times;</button>
+
+      <div class="mb-5">
+        <div class="lbl">Stock Management</div>
+        <h2 class="text-lg font-black" x-text="stockModal.item?.productTitle"></h2>
+        <div class="text-xs text-neutral-500 mt-0.5" x-text="(stockModal.item?.typeTitle ? stockModal.item?.typeTitle : '') + (stockModal.item?.subTitle ? ' &bull; ' + stockModal.item?.subTitle : '')"></div>
+      </div>
+
+      <!-- Identity Breakdown -->
+      <div class="p-3 bg-neutral-50 rounded-xl border border-neutral-100 text-xs space-y-1 mb-5 mono text-[11px]">
+        <div><span class="text-neutral-400">productId:</span> <span class="font-bold" x-text="stockModal.item?.productId"></span></div>
+        <div><span class="text-neutral-400">typeId:</span> <span class="font-bold" x-text="stockModal.item?.typeId || 'null'"></span></div>
+        <div><span class="text-neutral-400">subProductId:</span> <span class="font-bold" x-text="stockModal.item?.subProductId || 'null'"></span></div>
+      </div>
+
+      <!-- Current Stock Display -->
+      <div class="flex items-center justify-between p-4 bg-neutral-100 rounded-xl mb-5">
+        <span class="text-xs font-bold uppercase tracking-wider text-neutral-600">Current Stock</span>
+        <span class="text-2xl font-black mono" x-text="stockModal.item?.stock ?? 0"></span>
+      </div>
+
+      <!-- Exact Stock Set Form -->
+      <div class="space-y-3 mb-5">
+        <label class="lbl">Set Exact Stock Number</label>
+        <div class="flex gap-2">
+          <input 
+            type="number" 
+            min="0" 
+            step="1" 
+            class="inp text-sm font-bold mono" 
+            x-model="stockModal.targetValue" 
+            placeholder="e.g. 25"
+          >
+          <button 
+            class="btn btn-p flex-shrink-0" 
+            @click="submitSetStock()"
+            :disabled="stockModal.saving"
+          >
+            <span x-show="!stockModal.saving">Save Exact</span>
+            <span x-show="stockModal.saving">Saving...</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Adjustment Buttons -->
+      <div class="space-y-2 mb-6">
+        <div class="lbl">Quick Adjustments (Stock &ge; 0)</div>
+        <div class="grid grid-cols-4 gap-2">
+          <button class="btn btn-o !py-2 text-xs" @click="submitAdjustStock(1)">+1</button>
+          <button class="btn btn-o !py-2 text-xs" @click="submitAdjustStock(5)">+5</button>
+          <button class="btn btn-o !py-2 text-xs" @click="submitAdjustStock(10)">+10</button>
+          <button class="btn btn-o !py-2 text-xs" @click="submitAdjustStock(25)">+25</button>
+          <button class="btn btn-o !py-2 text-xs text-red-600" @click="submitAdjustStock(-1)">-1</button>
+          <button class="btn btn-o !py-2 text-xs text-red-600" @click="submitAdjustStock(-5)">-5</button>
+          <button class="btn btn-o !py-2 text-xs text-red-600" @click="submitAdjustStock(-10)">-10</button>
+          <button class="btn btn-d !py-2 text-xs" @click="submitSetZero()">Set 0</button>
+        </div>
+      </div>
+
+      <!-- Footer: Last updated & Close -->
+      <div class="flex items-center justify-between pt-3 border-t border-neutral-100 text-[11px] text-neutral-400">
+        <div>Updated: <span x-text="fmtDate(stockModal.item?.updatedAt)"></span></div>
+        <button class="btn btn-o !py-1 !px-3 !text-[9px]" @click="closeStockModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: ORDER DETAILS ================= -->
+  <div x-show="orderModal.open" class="modal-bg" @click="closeOrderModal()"></div>
+  <div x-show="orderModal.open" class="modal">
+    <div class="card w-full max-w-2xl p-8 relative" @click.away="closeOrderModal()">
+      <!-- Close button -->
+      <button @click="closeOrderModal()" class="absolute top-6 right-6 text-neutral-400 hover:text-black text-2xl leading-none">&times;</button>
+
+      <template x-if="orderModal.order">
+        <div>
+          <!-- Header -->
+          <div class="flex justify-between items-start mb-6">
+            <div>
+              <div class="lbl">Order Details</div>
+              <h2 class="text-xl font-black mono" x-text="orderModal.order.invoice_number"></h2>
+              <div class="text-xs text-neutral-500 mt-1">Placed on <span x-text="fmtDate(orderModal.order.created_at)"></span></div>
+              <div class="text-[11px] text-neutral-400 mt-0.5">Last updated: <span class="font-semibold text-neutral-700" x-text="fmtDate(orderModal.order.updated_at)"></span></div>
+              <template x-if="orderModal.order.stock_restored">
+                <span class="badge !bg-emerald-50 !text-emerald-700 !border-emerald-200 mt-1.5 font-black">&check; Stock Restored to Inventory</span>
+              </template>
+            </div>
+            <span class="badge uppercase text-xs !py-1 !px-3" :class="getOrderStatusBadgeClass(orderModal.order.status)" x-text="orderModal.order.status"></span>
+          </div>
+
+          <!-- Customer Information Grid -->
+          <div class="grid sm:grid-cols-2 gap-4 p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-xs mb-6">
+            <div>
+              <div class="lbl">Customer Details</div>
+              <div class="font-black text-sm" x-text="orderModal.order.customer?.name || 'N/A'"></div>
+              <div class="text-neutral-600 mt-1 font-semibold" x-text="orderModal.order.customer?.phone || 'N/A'"></div>
+              <div class="text-neutral-400 mt-0.5" x-text="orderModal.order.customer?.email || 'N/A'"></div>
+            </div>
+            <div>
+              <div class="lbl">Delivery Address</div>
+              <p class="text-neutral-700 leading-relaxed font-medium" x-text="orderModal.order.customer?.full_address || 'N/A'"></p>
+            </div>
+          </div>
+
+          <!-- Payment Information Block (Requirements 6 & 8) -->
+          <div class="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-xs mb-6">
+            <div class="lbl">Payment Information</div>
+            <div class="flex items-center justify-between flex-wrap gap-2 mt-1">
+              <div>
+                <span class="text-neutral-500 font-semibold">Payment Method:</span>
+                <span class="font-black uppercase ml-1" x-text="formatPaymentMethod(orderModal.order.payment_method)"></span>
+              </div>
+              
+              <!-- bKash / Nagad TrxID display -->
+              <template x-if="orderModal.order.payment_method === 'bkash' || orderModal.order.payment_method === 'nagad'">
+                <div class="flex items-center gap-2">
+                  <span class="text-neutral-500 font-semibold">Transaction ID:</span>
+                  <span class="font-black mono bg-white px-2 py-0.5 rounded border border-neutral-200" x-text="orderModal.order.trx_id || 'N/A'"></span>
+                </div>
+              </template>
+
+              <!-- COD display -->
+              <template x-if="orderModal.order.payment_method === 'cod'">
+                <span class="text-neutral-600 font-semibold">Cash On Delivery</span>
+              </template>
+            </div>
+
+            <!-- Sender number when applicable -->
+            <template x-if="orderModal.order.sender_number && orderModal.order.payment_method !== 'cod'">
+              <div class="mt-2.5 pt-2 border-t border-neutral-200/60 flex items-center gap-2">
+                <span class="text-neutral-500 font-semibold">Sender Number:</span>
+                <span class="font-black mono text-neutral-800" x-text="orderModal.order.sender_number"></span>
+              </div>
+            </template>
+          </div>
+
+          <!-- Ordered Items Table (Requirement 8) -->
+          <div class="mb-6">
+            <div class="lbl mb-2">Purchased Inventory Items</div>
+            <div class="border border-neutral-200 rounded-xl overflow-hidden">
+              <table class="tbl">
+                <thead>
+                  <tr>
+                    <th>Product & Variant</th>
+                    <th>Inventory Identifiers</th>
+                    <th>Qty</th>
+                    <th>Unit Price</th>
+                    <th class="text-right">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="item in (orderModal.order.items || [])" :key="item.id || item.productId">
+                    <tr>
+                      <td>
+                        <div class="font-bold text-xs" x-text="item.name || item.productTitle"></div>
+                        <div class="text-[10px] text-neutral-500" x-text="(item.typeTitle ? item.typeTitle : '') + (item.subTitle ? ' &bull; ' + item.subTitle : '')"></div>
+                      </td>
+                      <td class="mono text-[10px] text-neutral-500">
+                        <div>id: <span class="font-semibold text-black" x-text="item.id || item.productId"></span></div>
+                        <div x-show="item.typeId">typeId: <span class="font-semibold text-black" x-text="item.typeId"></span></div>
+                        <div x-show="item.subProductId">subProductId: <span class="font-semibold text-black" x-text="item.subProductId"></span></div>
+                      </td>
+                      <td class="font-bold mono" x-text="item.qty"></td>
+                      <td x-text="'BDT ' + fmtNum(item.price)"></td>
+                      <td class="text-right font-black mono" x-text="'BDT ' + fmtNum(item.subtotal)"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Total Breakdown -->
+            <div class="mt-3 p-3 bg-neutral-50 rounded-xl flex flex-col items-end gap-1 text-xs">
+              <div class="flex justify-between w-48 text-neutral-500">
+                <span>Subtotal:</span>
+                <span class="font-semibold mono" x-text="'BDT ' + fmtNum(orderModal.order.subtotal)"></span>
+              </div>
+              <template x-if="orderModal.order.delivery_charge > 0">
+                <div class="flex justify-between w-48 text-neutral-500">
+                  <span>Delivery:</span>
+                  <span class="font-semibold mono" x-text="'BDT ' + fmtNum(orderModal.order.delivery_charge)"></span>
+                </div>
+              </template>
+              <template x-if="orderModal.order.discount_amount > 0">
+                <div class="flex justify-between w-48 text-emerald-600">
+                  <span>Discount:</span>
+                  <span class="font-semibold mono" x-text="'- BDT ' + fmtNum(orderModal.order.discount_amount)"></span>
+                </div>
+              </template>
+              <div class="flex justify-between w-48 pt-2 border-t border-neutral-200 font-black text-sm">
+                <span>Total:</span>
+                <span class="mono" x-text="'BDT ' + fmtNum(orderModal.order.payment_amount)"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Order Status Management (Requirement 7) -->
+          <div class="p-4 bg-neutral-100 rounded-2xl mb-6">
+            <div class="lbl mb-2">Update Order Status</div>
+            <div class="flex items-center gap-3 flex-wrap">
+              <div class="w-48">
+                <select class="inp text-xs font-bold capitalize" x-model="orderModal.selectedStatus">
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="processing">Processing</option>
+                  <option value="shipped">Shipped</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+              <button 
+                class="btn btn-p !py-2 !px-4" 
+                @click="submitOrderStatusUpdate()"
+                :disabled="orderModal.saving || orderModal.selectedStatus === orderModal.order.status"
+              >
+                <span x-show="!orderModal.saving">Save Status</span>
+                <span x-show="orderModal.saving">Saving...</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="flex justify-end">
+            <button class="btn btn-o" @click="closeOrderModal()">Done</button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: SYNC REPORT (Requirement 2) ================= -->
+  <div x-show="syncModal.open" class="modal-bg" @click="syncModal.open = false"></div>
+  <div x-show="syncModal.open" class="modal">
+    <div class="card w-full max-w-md p-6 relative" @click.away="syncModal.open = false">
+      <button @click="syncModal.open = false" class="absolute top-5 right-5 text-neutral-400 hover:text-black text-2xl leading-none">&times;</button>
+      <div class="mb-4">
+        <div class="lbl">Catalog &bull; Inventory Synchronization</div>
+        <h2 class="text-lg font-black">Sync Results Report</h2>
+        <p class="text-xs text-neutral-500 mt-1" x-text="syncModal.message"></p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 mb-6">
+        <div class="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
+          <div class="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Catalog Items</div>
+          <div class="text-xl font-black mono mt-0.5 text-neutral-900" x-text="syncModal.catalogCount"></div>
+        </div>
+        <div class="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
+          <div class="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Existing DB Records</div>
+          <div class="text-xl font-black mono mt-0.5 text-neutral-900" x-text="syncModal.existingCount"></div>
+        </div>
+        <div class="p-3 bg-emerald-50/60 rounded-xl border border-emerald-200">
+          <div class="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Records Added (Stock 0)</div>
+          <div class="text-xl font-black mono mt-0.5 text-emerald-700" x-text="syncModal.addedCount"></div>
+        </div>
+        <div class="p-3 bg-neutral-50 rounded-xl border border-neutral-100" :class="syncModal.orphanedCount > 0 ? '!bg-amber-50/60 !border-amber-200' : ''">
+          <div class="text-[10px] font-bold uppercase tracking-wider" :class="syncModal.orphanedCount > 0 ? 'text-amber-700' : 'text-neutral-400'">Orphaned Records</div>
+          <div class="text-xl font-black mono mt-0.5" :class="syncModal.orphanedCount > 0 ? 'text-amber-700' : 'text-neutral-900'" x-text="syncModal.orphanedCount"></div>
+        </div>
+        <div class="col-span-2 p-3 bg-neutral-900 text-white rounded-xl">
+          <div class="flex items-center justify-between">
+            <div class="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Total Inventory Count</div>
+            <div class="text-lg font-black mono text-emerald-400" x-text="syncModal.totalInventoryCount"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end">
+        <button class="btn btn-p w-full" @click="syncModal.open = false">Close Report</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TOAST NOTIFICATION ================= -->
+  <div x-show="toast.visible" class="toast" x-transition>
+    <div class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" x-show="toast.type === 'success'"></div>
+    <div class="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" x-show="toast.type === 'error'"></div>
+    <div class="flex-grow text-xs" x-text="toast.message"></div>
+    <button @click="toast.visible = false" class="text-neutral-400 hover:text-white text-base leading-none">&times;</button>
+  </div>
+
+  <!-- ================= ALPINE.JS CLIENT LOGIC ================= -->
+  <script>
+    function adminApp() {
+      return {
+        // Navigation View: 'dash', 'inventory', 'orders', 'settings'
+        view: 'inventory',
+        
+        // System state
+        dbConnected: false,
+        loadingStatus: false,
+        catalogTotalItems: 106,
+        
+        // Inventory state
+        inventory: [],
+        invSummary: { total: 0, inStock: 0, lowStock: 0, outOfStock: 0, unmatched: 0 },
+        loadingInventory: false,
+        syncingInventory: false,
+        invSearch: '',
+        invFilter: 'all', // 'all', 'in_stock', 'low_stock', 'out_of_stock', 'unmatched'
+        
+        // Sync report modal state (Requirement 3 & 10)
+        syncModal: {
+          open: false,
+          catalogCount: 0,
+          existingCount: 0,
+          addedCount: 0,
+          orphanedCount: 0,
+          totalInventoryCount: 0,
+          message: '',
+        },
+
+        // Stock management modal state
+        stockModal: {
+          open: false,
+          item: null,
+          targetValue: 0,
+          saving: false,
+        },
+
+        // Orders state
+        orders: [],
+        loadingOrders: false,
+        orderSearch: '',
+        orderFilter: 'all', // 'all', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'
+        
+        // Order detail modal state
+        orderModal: {
+          open: false,
+          order: null,
+          selectedStatus: 'pending',
+          saving: false,
+        },
+
+        // Toast notification
+        toast: {
+          visible: false,
+          message: '',
+          type: 'success', // 'success', 'error'
+          timeout: null,
+        },
+
+        showToast(message, type = 'success') {
+          this.toast.message = message;
+          this.toast.type = type;
+          this.toast.visible = true;
+          if (this.toast.timeout) clearTimeout(this.toast.timeout);
+          this.toast.timeout = setTimeout(() => {
+            this.toast.visible = false;
+          }, 4500);
+        },
+
+        init() {
+          this.checkStatus();
+          this.fetchInventory();
+          this.fetchOrders();
+        },
+
+        async checkStatus(manual = false) {
+          this.loadingStatus = true;
+          try {
+            const res = await fetch('/api/inventory?status=true');
+            const data = await res.json();
+            if (data && data.success) {
+              this.dbConnected = !!data.connected;
+              this.catalogTotalItems = data.inventoryCount || this.catalogTotalItems;
+              if (manual) this.showToast('MongoDB Atlas connection is healthy.');
+            } else {
+              this.dbConnected = false;
+              if (manual) this.showToast('Server status check returned an error.', 'error');
+            }
+          } catch (err) {
+            this.dbConnected = false;
+            if (manual) this.showToast('Unable to reach status API endpoint.', 'error');
+          } finally {
+            this.loadingStatus = false;
+          }
+        },
+
+        async fetchAll(manual = false) {
+          await Promise.all([this.fetchInventory(manual), this.fetchOrders(manual), this.checkStatus()]);
+          if (manual) this.showToast('All dashboard data refreshed.');
+        },
+
+        // ================= INVENTORY API =================
+        async fetchInventory(notify = false) {
+          this.loadingInventory = true;
+          try {
+            const res = await fetch('/api/inventory');
+            const data = await res.json();
+            if (data && data.success) {
+              this.inventory = data.items || [];
+              this.invSummary = data.summary || {
+                total: this.inventory.length,
+                inStock: this.inventory.filter(i => i.stock > 5).length,
+                lowStock: this.inventory.filter(i => i.stock > 0 && i.stock <= 5).length,
+                outOfStock: this.inventory.filter(i => i.stock <= 0).length,
+                unmatched: this.inventory.filter(i => i.unmatched).length,
+              };
+              this.catalogTotalItems = data.totalCatalogItems || this.catalogTotalItems;
+              this.dbConnected = true;
+              if (notify) this.showToast(`Loaded ${this.inventory.length} inventory records from MongoDB.`);
+            } else {
+              this.showToast(data.error || 'Failed to fetch inventory', 'error');
+            }
+          } catch (err) {
+            console.error('Inventory fetch error:', err);
+            this.showToast('Network error while fetching inventory.', 'error');
+          } finally {
+            this.loadingInventory = false;
+          }
+        },
+
+        // UPDATE INVENTORY (Synchronization Button)
+        async syncInventory() {
+          this.syncingInventory = true;
+          try {
+            const res = await fetch('/api/inventory', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'sync' })
+            });
+            const data = await res.json();
+            if (data && data.success) {
+              this.syncModal = {
+                open: true,
+                catalogCount: data.catalogCount || 0,
+                existingCount: data.existingCount || 0,
+                addedCount: data.addedCount || 0,
+                orphanedCount: data.orphanedCount || 0,
+                totalInventoryCount: data.totalInventoryCount || 0,
+                message: data.message || '',
+              };
+              const added = data.addedCount || 0;
+              const msg = added > 0 
+                ? `Inventory updated: ${added} new item(s) discovered and initialized with stock 0.`
+                : `Inventory up to date: all ${data.catalogCount || 0} catalog items exist in MongoDB.`;
+              this.showToast(msg, 'success');
+              await this.fetchInventory();
+            } else {
+              this.showToast(data.error || 'Synchronization failed.', 'error');
+            }
+          } catch (err) {
+            console.error('Sync error:', err);
+            this.showToast('Error executing server-side inventory synchronization.', 'error');
+          } finally {
+            this.syncingInventory = false;
+          }
+        },
+
+        // STOCK MODAL & MODIFICATIONS
+        openStockModal(item) {
+          this.stockModal.item = item;
+          this.stockModal.targetValue = item.stock || 0;
+          this.stockModal.open = true;
+        },
+
+        closeStockModal() {
+          this.stockModal.open = false;
+          this.stockModal.item = null;
+        },
+
+        async submitSetStock() {
+          if (!this.stockModal.item) return;
+          const val = parseInt(this.stockModal.targetValue, 10);
+          if (isNaN(val) || val < 0) {
+            this.showToast('Stock must be a non-negative integer (>= 0).', 'error');
+            return;
+          }
+          await this.modifyStockApi(this.stockModal.item, 'set', val);
+          this.closeStockModal();
+        },
+
+        async submitAdjustStock(delta) {
+          if (!this.stockModal.item) return;
+          const action = delta >= 0 ? 'increase' : 'decrease';
+          await this.modifyStockApi(this.stockModal.item, action, Math.abs(delta));
+          if (this.stockModal.open && this.stockModal.item) {
+            this.stockModal.targetValue = this.stockModal.item.stock;
+          }
+        },
+
+        async submitSetZero() {
+          if (!this.stockModal.item) return;
+          await this.modifyStockApi(this.stockModal.item, 'set', 0);
+          if (this.stockModal.open && this.stockModal.item) {
+            this.stockModal.targetValue = 0;
+          }
+        },
+
+        async quickAdjustStock(item, delta) {
+          const action = delta >= 0 ? 'increase' : 'decrease';
+          await this.modifyStockApi(item, action, Math.abs(delta));
+        },
+
+        async modifyStockApi(item, action, value) {
+          try {
+            const res = await fetch('/api/inventory', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                productId: item.productId,
+                typeId: item.typeId,
+                subProductId: item.subProductId,
+                action,
+                value
+              })
+            });
+            const data = await res.json();
+            if (data && data.success) {
+              // Update local state smoothly
+              item.stock = data.stock;
+              item.updatedAt = data.updatedAt;
+              item.status = data.stock <= 0 ? 'out_of_stock' : (data.stock <= 5 ? 'low_stock' : 'in_stock');
+              
+              // Recalculate summary counts
+              this.recalcSummary();
+              this.showToast(`Stock updated: ${item.productTitle} is now ${data.stock}`);
+            } else {
+              const errMsg = data.error === 'INSUFFICIENT_STOCK' 
+                ? (data.message || 'Cannot decrease stock below zero (INSUFFICIENT_STOCK).')
+                : (data.error || 'Failed to update stock.');
+              this.showToast(errMsg, 'error');
+            }
+          } catch (err) {
+            console.error('Modify stock error:', err);
+            this.showToast('Network error while modifying stock.', 'error');
+          }
+        },
+
+        recalcSummary() {
+          this.invSummary = {
+            total: this.inventory.length,
+            inStock: this.inventory.filter(i => i.stock > 5).length,
+            lowStock: this.inventory.filter(i => i.stock > 0 && i.stock <= 5).length,
+            outOfStock: this.inventory.filter(i => i.stock <= 0).length,
+            unmatched: this.inventory.filter(i => i.orphaned || i.unmatched).length,
+          };
+        },
+
+        // ================= ORDERS API =================
+        async fetchOrders(notify = false) {
+          this.loadingOrders = true;
+          try {
+            const res = await fetch('/api/orders');
+            const data = await res.json();
+            if (data && data.success) {
+              this.orders = data.orders || [];
+              if (notify) this.showToast(`Loaded ${this.orders.length} orders from MongoDB.`);
+            } else {
+              this.showToast(data.error || 'Failed to fetch orders.', 'error');
+            }
+          } catch (err) {
+            console.error('Orders fetch error:', err);
+            this.showToast('Network error while fetching orders.', 'error');
+          } finally {
+            this.loadingOrders = false;
+          }
+        },
+
+        openOrderModal(order) {
+          this.orderModal.order = order;
+          this.orderModal.selectedStatus = order.status || 'pending';
+          this.orderModal.open = true;
+        },
+
+        closeOrderModal() {
+          this.orderModal.open = false;
+          this.orderModal.order = null;
+        },
+
+        async submitOrderStatusUpdate() {
+          if (!this.orderModal.order) return;
+          this.orderModal.saving = true;
+          try {
+            const res = await fetch('/api/orders', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                invoice_number: this.orderModal.order.invoice_number,
+                status: this.orderModal.selectedStatus
+              })
+            });
+            const data = await res.json();
+            if (data && data.success) {
+              this.orderModal.order.status = data.status;
+              this.orderModal.order.updated_at = data.updated_at;
+              if (data.stockRestored) {
+                this.orderModal.order.stockRestored = true;
+                this.orderModal.order.stock_restored = true;
+                this.showToast(`Order cancelled and stock restored to inventory in MongoDB transaction!`, 'success');
+                this.fetchInventory();
+              } else {
+                this.showToast(`Order ${this.orderModal.order.invoice_number} status changed to ${data.status}`);
+              }
+            } else {
+              this.showToast(data.error || 'Failed to update order status.', 'error');
+            }
+          } catch (err) {
+            console.error('Order update error:', err);
+            this.showToast('Network error updating order status.', 'error');
+          } finally {
+            this.orderModal.saving = false;
+          }
+        },
+
+        // ================= COMPUTED & FILTERS =================
+        get filteredInventory() {
+          const q = (this.invSearch || '').toLowerCase().trim();
+          return this.inventory.filter(item => {
+            // Filter pill match
+            if (this.invFilter === 'in_stock' && item.stock <= 5) return false;
+            if (this.invFilter === 'low_stock' && (item.stock <= 0 || item.stock > 5)) return false;
+            if (this.invFilter === 'out_of_stock' && item.stock > 0) return false;
+            if (this.invFilter === 'unmatched' && !item.unmatched) return false;
+
+            // Search query match
+            if (q) {
+              const pTitle = (item.productTitle || '').toLowerCase();
+              const pId = (item.productId || '').toLowerCase();
+              const tTitle = (item.typeTitle || '').toLowerCase();
+              const tId = (item.typeId || '').toLowerCase();
+              const sTitle = (item.subTitle || '').toLowerCase();
+              const sId = (item.subProductId || '').toLowerCase();
+              const match = pTitle.includes(q) || pId.includes(q) || tTitle.includes(q) || tId.includes(q) || sTitle.includes(q) || sId.includes(q);
+              if (!match) return false;
+            }
+            return true;
+          });
+        },
+
+        get alertInventoryItems() {
+          return this.inventory.filter(i => i.stock <= 5);
+        },
+
+        get filteredOrders() {
+          const q = (this.orderSearch || '').toLowerCase().trim();
+          return this.orders.filter(o => {
+            // Status match
+            if (this.orderFilter !== 'all' && o.status !== this.orderFilter) return false;
+
+            // Search query match
+            if (q) {
+              const inv = (o.invoice_number || '').toLowerCase();
+              const name = (o.customer?.name || '').toLowerCase();
+              const phone = (o.customer?.phone || '').toLowerCase();
+              const trx = (o.trx_id || '').toLowerCase();
+              const match = inv.includes(q) || name.includes(q) || phone.includes(q) || trx.includes(q);
+              if (!match) return false;
+            }
+            return true;
+          });
+        },
+
+        get pendingOrdersCount() {
+          return this.orders.filter(o => o.status === 'pending').length;
+        },
+
+        get totalRevenue() {
+          return this.orders.reduce((acc, o) => acc + (Number(o.payment_amount) || 0), 0);
+        },
+
+        // ================= HELPERS & FORMATTERS =================
+        fmtNum(val) {
+          const n = Number(val) || 0;
+          return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
+
+        fmtDate(d) {
+          if (!d) return '—';
+          try {
+            const date = new Date(d);
+            if (isNaN(date.getTime())) return '—';
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+          } catch (_) {
+            return '—';
+          }
+        },
+
+        formatPaymentMethod(m) {
+          if (!m) return 'COD';
+          const lower = String(m).toLowerCase();
+          if (lower === 'cod') return 'COD';
+          if (lower === 'bkash') return 'bKash';
+          if (lower === 'nagad') return 'Nagad';
+          return m.toUpperCase();
+        },
+
+        getPaymentBadgeClass(m) {
+          const lower = String(m || '').toLowerCase();
+          if (lower === 'bkash') return '!bg-pink-50 !text-pink-700 !border-pink-200';
+          if (lower === 'nagad') return '!bg-orange-50 !text-orange-700 !border-orange-200';
+          if (lower === 'cod') return '!bg-neutral-100 !text-neutral-700 !border-neutral-300';
+          return '!bg-neutral-100 !text-neutral-700';
+        },
+
+        getOrderStatusBadgeClass(status) {
+          const s = String(status || '').toLowerCase();
+          if (s === 'delivered') return '!bg-emerald-50 !text-emerald-700 !border-emerald-200';
+          if (s === 'shipped') return '!bg-indigo-50 !text-indigo-700 !border-indigo-200';
+          if (s === 'processing') return '!bg-purple-50 !text-purple-700 !border-purple-200';
+          if (s === 'confirmed') return '!bg-blue-50 !text-blue-700 !border-blue-200';
+          if (s === 'pending') return '!bg-amber-50 !text-amber-700 !border-amber-200';
+          if (s === 'cancelled' || s === 'failed') return '!bg-red-50 !text-red-700 !border-red-200';
+          return '!bg-neutral-100 !text-neutral-700';
+        }
+      };
+    }
+  </script>
+</body>
+</html>
