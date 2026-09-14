@@ -28,6 +28,7 @@ const PORT = process.env.PORT || 3001;
 
 const inventoryHandler = require("./api/inventory");
 const ordersHandler = require("./api/orders");
+const pathaoHandler = require("./api/pathao");
 
 const server = http.createServer(async (req, res) => {
   const parsedUrl = url.parse(req.url, true);
@@ -54,12 +55,14 @@ const server = http.createServer(async (req, res) => {
     return res.status(200).end();
   }
 
-  // Route matching to the 2 consolidated handlers
+  // Route matching to the consolidated handlers
   let handler = null;
   if (pathname.startsWith("/api/inventory") || pathname === "/api/status") {
     handler = inventoryHandler;
   } else if (pathname.startsWith("/api/orders")) {
     handler = ordersHandler;
+  } else if (pathname.startsWith("/api/pathao") || pathname === "/api/create-order") {
+    handler = pathaoHandler;
   }
 
   if (handler) {
@@ -97,8 +100,12 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Serve static files (index.html, etc.)
+  // Serve static files (index.html, orders.html, inventory.html, pathao.html, etc.)
   let filePath = path.join(__dirname, pathname === "/" ? "index.html" : pathname);
+
+  if (!fs.existsSync(filePath) && fs.existsSync(filePath + ".html")) {
+    filePath = filePath + ".html";
+  }
 
   if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
     filePath = path.join(__dirname, "index.html");

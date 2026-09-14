@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory Management &bull; Rawgad Admin</title>
+  <meta name="robots" content="noindex,nofollow">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Alpine.js CDN -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    [x-cloak] { display: none !important; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    
+    .inp {
+      width: 100%;
+      border: 1px solid #e5e5e5;
+      border-radius: 0.75rem;
+      padding: 0.55rem 0.85rem;
+      font-size: 0.8rem;
+      background: #fafafa;
+      outline: none;
+      transition: all 0.15s;
+    }
+    .inp:focus {
+      border-color: #000;
+      background: #fff;
+      box-shadow: 0 0 0 1px #000;
+    }
+    
+    label.lbl {
+      display: block;
+      font-size: 0.65rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #737373;
+      margin-bottom: 0.35rem;
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.55rem 1rem;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: 1px solid transparent;
+      line-height: 1.2;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-p { background: #000; color: #fff; }
+    .btn-p:hover:not(:disabled) { background: #262626; }
+    .btn-o { background: #fff; color: #000; border-color: #d4d4d4; }
+    .btn-o:hover:not(:disabled) { border-color: #000; background: #fafafa; }
+    .btn-d { background: #fff; color: #dc2626; border-color: #fecaca; }
+    .btn-d:hover:not(:disabled) { background: #fef2f2; border-color: #ef4444; }
+    .btn-s { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+    .btn-s:hover:not(:disabled) { background: #d1fae5; }
+    
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.62rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      border: 1px solid #e5e5e5;
+      background: #f5f5f5;
+      color: #404040;
+      white-space: nowrap;
+    }
+    
+    .nav-i {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      width: 100%;
+      text-align: left;
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.7rem 0.9rem;
+      border-radius: 0.75rem;
+      color: #a3a3a3;
+      cursor: pointer;
+      border: 1px solid transparent;
+      background: transparent;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+    .nav-i:hover { color: #fff; background: #171717; }
+    .nav-i.on { color: #fff; background: #171717; border-color: #262626; }
+    
+    .card {
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 1.25rem;
+    }
+    
+    table.tbl { width: 100%; font-size: 0.75rem; border-collapse: collapse; }
+    table.tbl th {
+      font-size: 0.62rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #737373;
+      text-align: left;
+      padding: 0.65rem 0.85rem;
+      border-bottom: 1px solid #e5e5e5;
+      white-space: nowrap;
+      background: #fafafa;
+    }
+    table.tbl td {
+      padding: 0.75rem 0.85rem;
+      border-bottom: 1px solid #f5f5f5;
+      vertical-align: middle;
+    }
+    table.tbl tr:hover td { background: #fafafa; }
+    
+    .modal-bg { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(2px); z-index: 60; }
+    .modal { position: fixed; inset: 0; z-index: 70; display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 2rem 1rem; }
+    
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 90;
+      background: #000;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.85rem 1.4rem;
+      border-radius: 0.9rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      max-width: 420px;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+  </style>
+</head>
+<body class="bg-neutral-100 text-neutral-900 min-h-screen" x-data="inventoryApp()" x-init="init()" x-cloak>
+
+  <!-- ================= APP SHELL ================= -->
+  <div class="min-h-screen flex">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="w-64 flex-shrink-0 bg-black text-neutral-400 flex flex-col min-h-screen sticky top-0 h-screen border-r border-neutral-900">
+      <div class="p-6 border-b border-neutral-900">
+        <a href="/" class="flex items-center gap-2 no-underline">
+          <div class="w-3 h-3 bg-white rounded-sm"></div>
+          <span class="font-black text-xl tracking-widest text-white">RAWGAD</span>
+        </a>
+        <div class="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-500 mt-1.5">Admin &bull; Inventory &bull; Catalog</div>
+      </div>
+
+      <nav class="p-4 space-y-1.5 flex-grow overflow-y-auto">
+        <!-- Dashboard -->
+        <a href="/" class="nav-i">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h2a2 2 0 012-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+          Dashboard & Analytics
+        </a>
+
+        <!-- Inventory (Active) -->
+        <a href="/inventory.html" class="nav-i on">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+          Inventory
+          <span x-show="invSummary.outOfStock > 0" class="ml-auto bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full" x-text="invSummary.outOfStock"></span>
+        </a>
+
+        <!-- Orders -->
+        <a href="/orders.html" class="nav-i">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+          Orders
+          <span x-show="pendingOrdersCount > 0" class="ml-auto bg-amber-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-full" x-text="pendingOrdersCount"></span>
+        </a>
+
+        <!-- Pathao Courier -->
+        <a href="/pathao.html" class="nav-i">
+          <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          Pathao Courier
+        </a>
+
+        <!-- Sheet Link -->
+        <div class="pt-4 mt-4 border-t border-neutral-900">
+          <a :href="sheetUrl" target="_blank" rel="noopener noreferrer" class="nav-i !text-emerald-400 hover:!text-emerald-300 !bg-emerald-950/30 hover:!bg-emerald-950/60 !border-emerald-900/50">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            Google Sheet &rarr;
+          </a>
+        </div>
+      </nav>
+
+      <!-- Sidebar Footer: Status & Refresh -->
+      <div class="p-4 border-t border-neutral-900">
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-neutral-900 text-neutral-400 cursor-pointer hover:bg-neutral-800 transition-colors" @click="checkStatus(true)">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full" :class="dbConnected ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-red-500'"></span>
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-wider text-white" x-text="dbConnected ? 'paystationdemo' : 'Offline'"></div>
+              <div class="text-[9px] text-neutral-500" x-text="dbConnected ? 'Atlas Connected' : 'Check server'"></div>
+            </div>
+          </div>
+          <button class="text-neutral-500 hover:text-white text-xs" title="Refresh status">&#8635;</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow p-6 lg:p-10 max-w-[1440px] w-full mx-auto">
+
+      <!-- Server Warning Banner -->
+      <div x-show="!dbConnected && !loadingStatus" class="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-900 rounded-2xl flex items-center justify-between text-xs font-semibold">
+        <div class="flex items-center gap-2">
+          <span class="text-red-600 font-bold">&#9888; Server Offline</span>
+          <span class="text-red-700 text-[11px]">&mdash; Unable to connect to MongoDB Atlas. Ensure API backend is active.</span>
+        </div>
+        <button class="btn btn-o !py-1 !px-3 !text-[9px] !bg-white" @click="checkStatus(true)">&#8635; Retry</button>
+      </div>
+
+      <!-- Inventory Top Bar -->
+      <div class="flex items-start justify-between mb-6 flex-wrap gap-4">
+        <div>
+          <h1 class="text-2xl font-black tracking-tight flex items-center gap-2.5">
+            Inventory Management
+            <span class="badge !bg-black !text-white text-xs" x-text="inventory.length"></span>
+          </h1>
+          <p class="text-xs text-neutral-500 mt-1">
+            Authoritative MongoDB stock (<span class="mono font-semibold">inventory</span>) matched with public catalog (<span class="mono font-semibold">products.json</span>).
+          </p>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-3 flex-wrap">
+          <!-- Google Sheet Button -->
+          <a :href="sheetUrl" target="_blank" rel="noopener noreferrer" class="btn btn-s shadow-sm">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <span>Sheet</span>
+          </a>
+
+          <button 
+            class="btn btn-o" 
+            @click="fetchInventory(true)"
+            :disabled="loadingInventory"
+          >
+            <span x-show="!loadingInventory">&#8635; Refresh</span>
+            <span x-show="loadingInventory">Loading...</span>
+          </button>
+
+          <!-- Update Inventory Button -->
+          <button 
+            class="btn btn-p !bg-black hover:!bg-neutral-800 shadow-sm"
+            @click="syncInventory()"
+            :disabled="syncingInventory"
+            title="Fetch latest products.json, find missing purchasable items, and create them with stock 0"
+          >
+            <svg x-show="syncingInventory" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <span x-show="!syncingInventory">&#8645; Update Inventory</span>
+            <span x-show="syncingInventory">Syncing Catalog...</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Search & Filter Controls -->
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <!-- Filter Pills -->
+        <div class="flex gap-2 flex-wrap items-center">
+          <button class="badge !py-1.5 !px-3 cursor-pointer" :class="invFilter === 'all' && '!bg-black !text-white !border-black'" @click="invFilter = 'all'">
+            All (<span x-text="inventory.length"></span>)
+          </button>
+          <button class="badge !py-1.5 !px-3 cursor-pointer" :class="invFilter === 'in_stock' && '!bg-black !text-white !border-black'" @click="invFilter = 'in_stock'">
+            In Stock (<span x-text="invSummary.inStock"></span>)
+          </button>
+          <button class="badge !py-1.5 !px-3 cursor-pointer" :class="invFilter === 'low_stock' && '!bg-black !text-white !border-black'" @click="invFilter = 'low_stock'">
+            Low Stock (<span x-text="invSummary.lowStock"></span>)
+          </button>
+          <button class="badge !py-1.5 !px-3 cursor-pointer" :class="invFilter === 'out_of_stock' && '!bg-black !text-white !border-black'" @click="invFilter = 'out_of_stock'">
+            Out of Stock (<span x-text="invSummary.outOfStock"></span>)
+          </button>
+          <button x-show="invSummary.unmatched > 0" class="badge !py-1.5 !px-3 cursor-pointer !bg-amber-100 !text-amber-800 !border-amber-300" :class="invFilter === 'unmatched' && '!bg-amber-600 !text-white !border-amber-600'" @click="invFilter = 'unmatched'">
+            Unmatched (<span x-text="invSummary.unmatched"></span>)
+          </button>
+        </div>
+
+        <!-- Search Input -->
+        <div class="w-full sm:w-80">
+          <input 
+            class="inp" 
+            placeholder="Search product, variant, ID..." 
+            x-model="invSearch"
+          >
+        </div>
+      </div>
+
+      <!-- Inventory Table Card -->
+      <div class="card overflow-x-auto shadow-sm">
+        <table class="tbl min-w-[980px]">
+          <thead>
+            <tr>
+              <th class="w-12">Item</th>
+              <th>Product Information</th>
+              <th>Type (Variant)</th>
+              <th>Subproduct</th>
+              <th>Catalog Price</th>
+              <th>Current Stock</th>
+              <th>Stock Status</th>
+              <th>Last Updated</th>
+              <th class="text-right">Manage Stock</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="item in filteredInventory" :key="item.key">
+              <tr :class="item.unmatched ? 'bg-amber-50/40' : ''">
+                <!-- Thumbnail Image -->
+                <td>
+                  <img 
+                    :src="item.imageSrc || 'https://placehold.co/80x80/e2e8f0/64748b?text=Item'" 
+                    class="w-10 h-10 rounded-lg object-cover bg-neutral-100 border border-neutral-200"
+                    onerror="this.src='https://placehold.co/80x80/e2e8f0/64748b?text=Item'"
+                  >
+                </td>
+
+                <!-- Product Name & ID -->
+                <td>
+                  <div class="font-bold text-xs" x-text="item.productTitle"></div>
+                  <div class="text-[10px] mono text-neutral-400" x-text="'ID: ' + item.productId"></div>
+                  <template x-if="item.unmatched">
+                    <span class="badge !bg-amber-100 !text-amber-800 !border-amber-300 !text-[9px] mt-0.5">Unmatched in Catalog</span>
+                  </template>
+                </td>
+
+                <!-- Type Name & ID -->
+                <td>
+                  <div class="font-semibold text-xs" x-text="item.typeTitle || '—'"></div>
+                  <div x-show="item.typeId" class="text-[10px] mono text-neutral-400" x-text="'Type ID: ' + item.typeId"></div>
+                </td>
+
+                <!-- Subproduct Name & ID -->
+                <td>
+                  <div class="font-semibold text-xs" x-text="item.subTitle || '—'"></div>
+                  <div x-show="item.subProductId" class="text-[10px] mono text-neutral-400" x-text="'Sub ID: ' + item.subProductId"></div>
+                </td>
+
+                <!-- Price from Catalog -->
+                <td class="font-bold text-xs" x-text="'BDT ' + fmtNum(item.price)"></td>
+
+                <!-- Current Stock in MongoDB -->
+                <td>
+                  <div class="text-sm font-black mono" :class="item.stock <= 0 ? 'text-red-600' : (item.stock <= 5 ? 'text-amber-600' : 'text-neutral-900')" x-text="item.stock"></div>
+                </td>
+
+                <!-- Status Badge -->
+                <td>
+                  <span 
+                    class="badge uppercase" 
+                    :class="item.stock <= 0 ? '!bg-red-50 !text-red-700 !border-red-200' : (item.stock <= 5 ? '!bg-amber-50 !text-amber-700 !border-amber-200' : '!bg-emerald-50 !text-emerald-700 !border-emerald-200')"
+                    x-text="item.stock <= 0 ? 'Out of Stock' : (item.stock <= 5 ? 'Low Stock' : 'In Stock')"
+                  ></span>
+                </td>
+
+                <!-- Last Updated Time -->
+                <td class="text-[11px] text-neutral-500 whitespace-nowrap" x-text="fmtDate(item.updatedAt)"></td>
+
+                <!-- Quick Stock Actions & Edit Modal Button -->
+                <td class="text-right whitespace-nowrap">
+                  <div class="inline-flex items-center gap-1.5">
+                    <button 
+                      class="btn btn-o !p-1.5 !text-[10px] !rounded-md" 
+                      title="Decrease stock by 1"
+                      :disabled="item.stock <= 0"
+                      @click="quickAdjustStock(item, -1)"
+                    >-1</button>
+                    <button 
+                      class="btn btn-o !p-1.5 !text-[10px] !rounded-md" 
+                      title="Increase stock by 1"
+                      @click="quickAdjustStock(item, 1)"
+                    >+1</button>
+                    <button 
+                      class="btn btn-o !p-1.5 !text-[10px] !rounded-md" 
+                      title="Increase stock by 5"
+                      @click="quickAdjustStock(item, 5)"
+                    >+5</button>
+                    <button 
+                      class="btn btn-p !py-1.5 !px-3 !text-[10px]" 
+                      @click="openStockModal(item)"
+                    >Set Stock</button>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+
+        <div x-show="filteredInventory.length === 0" class="text-center py-16 text-neutral-400">
+          <p class="text-xs font-bold uppercase tracking-wider">No inventory items matched your filter or search.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ================= MODAL: EDIT STOCK ================= -->
+  <div x-show="stockModal.open" class="modal-bg" @click="closeStockModal()"></div>
+  <div x-show="stockModal.open" class="modal">
+    <div class="card w-full max-w-md p-6 relative" @click.away="closeStockModal()">
+      <button @click="closeStockModal()" class="absolute top-5 right-5 text-neutral-400 hover:text-black text-2xl leading-none">&times;</button>
+
+      <div class="mb-5">
+        <div class="lbl">Stock Management</div>
+        <h2 class="text-lg font-black" x-text="stockModal.item?.productTitle"></h2>
+        <div class="text-xs text-neutral-500 mt-0.5" x-text="(stockModal.item?.typeTitle ? stockModal.item?.typeTitle : '') + (stockModal.item?.subTitle ? ' &bull; ' + stockModal.item?.subTitle : '')"></div>
+      </div>
+
+      <!-- Identity Breakdown -->
+      <div class="p-3 bg-neutral-50 rounded-xl border border-neutral-100 text-xs space-y-1 mb-5 mono text-[11px]">
+        <div><span class="text-neutral-400">productId:</span> <span class="font-bold" x-text="stockModal.item?.productId"></span></div>
+        <div><span class="text-neutral-400">typeId:</span> <span class="font-bold" x-text="stockModal.item?.typeId || 'null'"></span></div>
+        <div><span class="text-neutral-400">subProductId:</span> <span class="font-bold" x-text="stockModal.item?.subProductId || 'null'"></span></div>
+      </div>
+
+      <!-- Current Stock Display -->
+      <div class="flex items-center justify-between p-4 bg-neutral-100 rounded-xl mb-5">
+        <span class="text-xs font-bold uppercase tracking-wider text-neutral-600">Current Stock</span>
+        <span class="text-2xl font-black mono" x-text="stockModal.item?.stock ?? 0"></span>
+      </div>
+
+      <!-- Exact Stock Set Form -->
+      <div class="space-y-3 mb-5">
+        <label class="lbl">Set Exact Stock Number</label>
+        <div class="flex gap-2">
+          <input 
+            type="number" 
+            min="0" 
+            step="1" 
+            class="inp text-sm font-bold mono" 
+            x-model="stockModal.targetValue" 
+            placeholder="e.g. 25"
+          >
+          <button 
+            class="btn btn-p flex-shrink-0" 
+            @click="submitSetStock()"
+            :disabled="stockModal.saving"
+          >
+            <span x-show="!stockModal.saving">Save Exact</span>
+            <span x-show="stockModal.saving">Saving...</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Adjustment Buttons -->
+      <div class="space-y-2 mb-6">
+        <div class="lbl">Quick Adjustments (Stock &ge; 0)</div>
+        <div class="grid grid-cols-4 gap-2">
+          <button class="btn btn-o !py-2 text-xs" @click="submitAdjustStock(1)">+1</button>
+          <button class="btn btn-o !py-2 text-xs" @click="submitAdjustStock(5)">+5</button>
+          <button class="btn btn-o !py-2 text-xs" @click="submitAdjustStock(10)">+10</button>
+          <button class="btn btn-o !py-2 text-xs" @click="submitAdjustStock(25)">+25</button>
+          <button class="btn btn-o !py-2 text-xs text-red-600" @click="submitAdjustStock(-1)">-1</button>
+          <button class="btn btn-o !py-2 text-xs text-red-600" @click="submitAdjustStock(-5)">-5</button>
+          <button class="btn btn-o !py-2 text-xs text-red-600" @click="submitAdjustStock(-10)">-10</button>
+          <button class="btn btn-d !py-2 text-xs" @click="submitSetZero()">Set 0</button>
+        </div>
+      </div>
+
+      <!-- Footer: Last updated & Close -->
+      <div class="flex items-center justify-between pt-3 border-t border-neutral-100 text-[11px] text-neutral-400">
+        <div>Updated: <span x-text="fmtDate(stockModal.item?.updatedAt)"></span></div>
+        <button class="btn btn-o !py-1 !px-3 !text-[9px]" @click="closeStockModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: SYNC REPORT ================= -->
+  <div x-show="syncModal.open" class="modal-bg" @click="syncModal.open = false"></div>
+  <div x-show="syncModal.open" class="modal">
+    <div class="card w-full max-w-md p-6 relative" @click.away="syncModal.open = false">
+      <button @click="syncModal.open = false" class="absolute top-5 right-5 text-neutral-400 hover:text-black text-2xl leading-none">&times;</button>
+      <div class="mb-4">
+        <div class="lbl">Catalog &bull; Inventory Synchronization</div>
+        <h2 class="text-lg font-black">Sync Results Report</h2>
+        <p class="text-xs text-neutral-500 mt-1" x-text="syncModal.message"></p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 mb-6">
+        <div class="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
+          <div class="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Catalog Items</div>
+          <div class="text-xl font-black mono mt-0.5 text-neutral-900" x-text="syncModal.catalogCount"></div>
+        </div>
+        <div class="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
+          <div class="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Existing DB Records</div>
+          <div class="text-xl font-black mono mt-0.5 text-neutral-900" x-text="syncModal.existingCount"></div>
+        </div>
+        <div class="p-3 bg-emerald-50/60 rounded-xl border border-emerald-200">
+          <div class="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Records Added (Stock 0)</div>
+          <div class="text-xl font-black mono mt-0.5 text-emerald-700" x-text="syncModal.addedCount"></div>
+        </div>
+        <div class="p-3 bg-neutral-50 rounded-xl border border-neutral-100" :class="syncModal.orphanedCount > 0 ? '!bg-amber-50/60 !border-amber-200' : ''">
+          <div class="text-[10px] font-bold uppercase tracking-wider" :class="syncModal.orphanedCount > 0 ? 'text-amber-700' : 'text-neutral-400'">Orphaned Records</div>
+          <div class="text-xl font-black mono mt-0.5" :class="syncModal.orphanedCount > 0 ? 'text-amber-700' : 'text-neutral-900'" x-text="syncModal.orphanedCount"></div>
+        </div>
+        <div class="col-span-2 p-3 bg-neutral-900 text-white rounded-xl">
+          <div class="flex items-center justify-between">
+            <div class="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Total Inventory Count</div>
+            <div class="text-lg font-black mono text-emerald-400" x-text="syncModal.totalInventoryCount"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end">
+        <button class="btn btn-p w-full" @click="syncModal.open = false">Close Report</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TOAST NOTIFICATION ================= -->
+  <div x-show="toast.visible" class="toast" x-transition>
+    <div class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" x-show="toast.type === 'success'"></div>
+    <div class="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" x-show="toast.type === 'error'"></div>
+    <div class="flex-grow text-xs" x-text="toast.message"></div>
+    <button @click="toast.visible = false" class="text-neutral-400 hover:text-white text-base leading-none">&times;</button>
+  </div>
+
+  <!-- ================= ALPINE.JS CLIENT LOGIC ================= -->
+  <script>
+    function inventoryApp() {
+      return {
+        // System state
+        dbConnected: false,
+        loadingStatus: false,
+        pendingOrdersCount: 0,
+        sheetUrl: localStorage.getItem('rawgad_sheet_url') || 'https://docs.google.com/spreadsheets/',
+
+        // Inventory state
+        inventory: [],
+        invSummary: { total: 0, inStock: 0, lowStock: 0, outOfStock: 0, unmatched: 0 },
+        loadingInventory: false,
+        syncingInventory: false,
+        invSearch: '',
+        invFilter: 'all',
+
+        // Modals
+        syncModal: {
+          open: false,
+          catalogCount: 0,
+          existingCount: 0,
+          addedCount: 0,
+          orphanedCount: 0,
+          totalInventoryCount: 0,
+          message: '',
+        },
+
+        stockModal: {
+          open: false,
+          item: null,
+          targetValue: 0,
+          saving: false,
+        },
+
+        // Toast
+        toast: {
+          visible: false,
+          message: '',
+          type: 'success',
+          timeout: null,
+        },
+
+        showToast(message, type = 'success') {
+          this.toast.message = message;
+          this.toast.type = type;
+          this.toast.visible = true;
+          if (this.toast.timeout) clearTimeout(this.toast.timeout);
+          this.toast.timeout = setTimeout(() => {
+            this.toast.visible = false;
+          }, 4500);
+        },
+
+        init() {
+          this.checkStatus();
+          this.fetchInventory();
+          this.fetchPendingOrdersCount();
+        },
+
+        async checkStatus(manual = false) {
+          this.loadingStatus = true;
+          try {
+            const res = await fetch('/api/inventory?status=true');
+            const data = await res.json();
+            if (data && data.success) {
+              this.dbConnected = !!data.connected;
+              if (manual) this.showToast('MongoDB Atlas connection healthy.');
+            } else {
+              this.dbConnected = false;
+              if (manual) this.showToast('Database connection offline.', 'error');
+            }
+          } catch (err) {
+            this.dbConnected = false;
+            if (manual) this.showToast('Unable to reach status endpoint.', 'error');
+          } finally {
+            this.loadingStatus = false;
+          }
+        },
+
+        async fetchPendingOrdersCount() {
+          try {
+            const res = await fetch('/api/orders');
+            const data = await res.json();
+            if (data && data.success && data.orders) {
+              this.pendingOrdersCount = data.orders.filter(o => o.status === 'pending').length;
+            }
+          } catch (_) {}
+        },
+
+        async fetchInventory(notify = false) {
+          this.loadingInventory = true;
+          try {
+            const res = await fetch('/api/inventory');
+            const data = await res.json();
+            if (data && data.success) {
+              this.inventory = data.items || [];
+              this.invSummary = data.summary || {
+                total: this.inventory.length,
+                inStock: this.inventory.filter(i => i.stock > 5).length,
+                lowStock: this.inventory.filter(i => i.stock > 0 && i.stock <= 5).length,
+                outOfStock: this.inventory.filter(i => i.stock <= 0).length,
+                unmatched: this.inventory.filter(i => i.unmatched).length,
+              };
+              this.dbConnected = true;
+              if (notify) this.showToast(`Loaded ${this.inventory.length} inventory records from MongoDB.`);
+            } else {
+              this.showToast(data.error || 'Failed to fetch inventory', 'error');
+            }
+          } catch (err) {
+            console.error('Inventory fetch error:', err);
+            this.showToast('Network error while fetching inventory.', 'error');
+          } finally {
+            this.loadingInventory = false;
+          }
+        },
+
+        async syncInventory() {
+          this.syncingInventory = true;
+          try {
+            const res = await fetch('/api/inventory', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'sync' })
+            });
+            const data = await res.json();
+            if (data && data.success) {
+              this.syncModal = {
+                open: true,
+                catalogCount: data.catalogCount || 0,
+                existingCount: data.existingCount || 0,
+                addedCount: data.addedCount || 0,
+                orphanedCount: data.orphanedCount || 0,
+                totalInventoryCount: data.totalInventoryCount || 0,
+                message: data.message || '',
+              };
+              const added = data.addedCount || 0;
+              const msg = added > 0 
+                ? `Inventory updated: ${added} new item(s) discovered and initialized with stock 0.`
+                : `Inventory up to date: all ${data.catalogCount || 0} catalog items exist in MongoDB.`;
+              this.showToast(msg, 'success');
+              await this.fetchInventory();
+            } else {
+              this.showToast(data.error || 'Synchronization failed.', 'error');
+            }
+          } catch (err) {
+            console.error('Sync error:', err);
+            this.showToast('Error executing server-side inventory synchronization.', 'error');
+          } finally {
+            this.syncingInventory = false;
+          }
+        },
+
+        // Stock Management
+        openStockModal(item) {
+          this.stockModal.item = item;
+          this.stockModal.targetValue = item.stock || 0;
+          this.stockModal.open = true;
+        },
+
+        closeStockModal() {
+          this.stockModal.open = false;
+          this.stockModal.item = null;
+        },
+
+        async submitSetStock() {
+          if (!this.stockModal.item) return;
+          const val = parseInt(this.stockModal.targetValue, 10);
+          if (isNaN(val) || val < 0) {
+            this.showToast('Stock must be a non-negative integer (>= 0).', 'error');
+            return;
+          }
+          await this.modifyStockApi(this.stockModal.item, 'set', val);
+          this.closeStockModal();
+        },
+
+        async submitAdjustStock(delta) {
+          if (!this.stockModal.item) return;
+          const action = delta >= 0 ? 'increase' : 'decrease';
+          await this.modifyStockApi(this.stockModal.item, action, Math.abs(delta));
+          if (this.stockModal.open && this.stockModal.item) {
+            this.stockModal.targetValue = this.stockModal.item.stock;
+          }
+        },
+
+        async submitSetZero() {
+          if (!this.stockModal.item) return;
+          await this.modifyStockApi(this.stockModal.item, 'set', 0);
+          if (this.stockModal.open && this.stockModal.item) {
+            this.stockModal.targetValue = 0;
+          }
+        },
+
+        async quickAdjustStock(item, delta) {
+          const action = delta >= 0 ? 'increase' : 'decrease';
+          await this.modifyStockApi(item, action, Math.abs(delta));
+        },
+
+        async modifyStockApi(item, action, value) {
+          try {
+            const res = await fetch('/api/inventory', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                productId: item.productId,
+                typeId: item.typeId,
+                subProductId: item.subProductId,
+                action,
+                value
+              })
+            });
+            const data = await res.json();
+            if (data && data.success) {
+              item.stock = data.stock;
+              item.updatedAt = data.updatedAt;
+              item.status = data.stock <= 0 ? 'out_of_stock' : (data.stock <= 5 ? 'low_stock' : 'in_stock');
+              this.recalcSummary();
+              this.showToast(`Stock updated: ${item.productTitle} is now ${data.stock}`);
+            } else {
+              const errMsg = data.error === 'INSUFFICIENT_STOCK' 
+                ? (data.message || 'Cannot decrease stock below zero.')
+                : (data.error || 'Failed to update stock.');
+              this.showToast(errMsg, 'error');
+            }
+          } catch (err) {
+            console.error('Modify stock error:', err);
+            this.showToast('Network error while modifying stock.', 'error');
+          }
+        },
+
+        recalcSummary() {
+          this.invSummary = {
+            total: this.inventory.length,
+            inStock: this.inventory.filter(i => i.stock > 5).length,
+            lowStock: this.inventory.filter(i => i.stock > 0 && i.stock <= 5).length,
+            outOfStock: this.inventory.filter(i => i.stock <= 0).length,
+            unmatched: this.inventory.filter(i => i.orphaned || i.unmatched).length,
+          };
+        },
+
+        get filteredInventory() {
+          const q = (this.invSearch || '').toLowerCase().trim();
+          return this.inventory.filter(item => {
+            if (this.invFilter === 'in_stock' && item.stock <= 5) return false;
+            if (this.invFilter === 'low_stock' && (item.stock <= 0 || item.stock > 5)) return false;
+            if (this.invFilter === 'out_of_stock' && item.stock > 0) return false;
+            if (this.invFilter === 'unmatched' && !item.unmatched) return false;
+
+            if (q) {
+              const pTitle = (item.productTitle || '').toLowerCase();
+              const pId = (item.productId || '').toLowerCase();
+              const tTitle = (item.typeTitle || '').toLowerCase();
+              const tId = (item.typeId || '').toLowerCase();
+              const sTitle = (item.subTitle || '').toLowerCase();
+              const sId = (item.subProductId || '').toLowerCase();
+              const match = pTitle.includes(q) || pId.includes(q) || tTitle.includes(q) || tId.includes(q) || sTitle.includes(q) || sId.includes(q);
+              if (!match) return false;
+            }
+            return true;
+          });
+        },
+
+        fmtNum(val) {
+          const n = Number(val) || 0;
+          return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
+
+        fmtDate(d) {
+          if (!d) return '—';
+          try {
+            const date = new Date(d);
+            if (isNaN(date.getTime())) return '—';
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+          } catch (_) {
+            return '—';
+          }
+        }
+      };
+    }
+  </script>
+</body>
+</html>

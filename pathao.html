@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pathao Courier Dispatch &bull; Rawgad Admin</title>
+  <meta name="robots" content="noindex,nofollow">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Alpine.js CDN -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    [x-cloak] { display: none !important; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    
+    .inp {
+      width: 100%;
+      border: 1px solid #e5e5e5;
+      border-radius: 0.75rem;
+      padding: 0.55rem 0.85rem;
+      font-size: 0.8rem;
+      background: #fafafa;
+      outline: none;
+      transition: all 0.15s;
+    }
+    .inp:focus {
+      border-color: #000;
+      background: #fff;
+      box-shadow: 0 0 0 1px #000;
+    }
+    
+    label.lbl {
+      display: block;
+      font-size: 0.65rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #737373;
+      margin-bottom: 0.35rem;
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.55rem 1rem;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: 1px solid transparent;
+      line-height: 1.2;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-p { background: #000; color: #fff; }
+    .btn-p:hover:not(:disabled) { background: #262626; }
+    .btn-o { background: #fff; color: #000; border-color: #d4d4d4; }
+    .btn-o:hover:not(:disabled) { border-color: #000; background: #fafafa; }
+    .btn-s { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+    .btn-s:hover:not(:disabled) { background: #d1fae5; }
+    .btn-pathao { background: #ea1d25; color: #fff; }
+    .btn-pathao:hover:not(:disabled) { background: #c8131a; }
+    
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.62rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      border: 1px solid #e5e5e5;
+      background: #f5f5f5;
+      color: #404040;
+      white-space: nowrap;
+    }
+    
+    .nav-i {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      width: 100%;
+      text-align: left;
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.7rem 0.9rem;
+      border-radius: 0.75rem;
+      color: #a3a3a3;
+      cursor: pointer;
+      border: 1px solid transparent;
+      background: transparent;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+    .nav-i:hover { color: #fff; background: #171717; }
+    .nav-i.on { color: #fff; background: #171717; border-color: #262626; }
+    
+    .card {
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 1.25rem;
+    }
+    
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 90;
+      background: #000;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.85rem 1.4rem;
+      border-radius: 0.9rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      max-width: 420px;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+  </style>
+</head>
+<body class="bg-neutral-100 text-neutral-900 min-h-screen" x-data="pathaoApp()" x-init="init()" x-cloak>
+
+  <!-- ================= APP SHELL ================= -->
+  <div class="min-h-screen flex">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="w-64 flex-shrink-0 bg-black text-neutral-400 flex flex-col min-h-screen sticky top-0 h-screen border-r border-neutral-900">
+      <div class="p-6 border-b border-neutral-900">
+        <a href="/" class="flex items-center gap-2 no-underline">
+          <div class="w-3 h-3 bg-white rounded-sm"></div>
+          <span class="font-black text-xl tracking-widest text-white">RAWGAD</span>
+        </a>
+        <div class="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-500 mt-1.5">Admin &bull; Pathao Courier</div>
+      </div>
+
+      <nav class="p-4 space-y-1.5 flex-grow overflow-y-auto">
+        <!-- Dashboard -->
+        <a href="/" class="nav-i">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+          Dashboard & Analytics
+        </a>
+
+        <!-- Inventory -->
+        <a href="/inventory.html" class="nav-i">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+          Inventory
+        </a>
+
+        <!-- Orders -->
+        <a href="/orders.html" class="nav-i">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+          Orders
+          <span x-show="pendingOrdersCount > 0" class="ml-auto bg-amber-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-full" x-text="pendingOrdersCount"></span>
+        </a>
+
+        <!-- Pathao Courier (Active) -->
+        <a href="/pathao.html" class="nav-i on">
+          <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          Pathao Courier
+        </a>
+
+        <!-- Sheet Link -->
+        <div class="pt-4 mt-4 border-t border-neutral-900">
+          <a :href="sheetUrl" target="_blank" rel="noopener noreferrer" class="nav-i !text-emerald-400 hover:!text-emerald-300 !bg-emerald-950/30 hover:!bg-emerald-950/60 !border-emerald-900/50">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            Google Sheet &rarr;
+          </a>
+        </div>
+      </nav>
+
+      <!-- Sidebar Footer -->
+      <div class="p-4 border-t border-neutral-900">
+        <div class="p-2.5 rounded-xl bg-neutral-900 text-neutral-400">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]"></span>
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-wider text-white">Pathao Aladdin</div>
+              <div class="text-[9px] text-neutral-500" x-text="stores.length + ' Stores Loaded'"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow p-6 lg:p-10 max-w-[1200px] w-full mx-auto">
+      
+      <!-- Top Bar -->
+      <div class="flex items-start justify-between mb-8 flex-wrap gap-4">
+        <div>
+          <h1 class="text-2xl font-black tracking-tight flex items-center gap-2.5">
+            <span class="text-red-600 font-bold">📦</span> Pathao Courier Dispatch
+          </h1>
+          <p class="text-xs text-neutral-500 mt-1">
+            Official courier dispatch terminal integrated with Pathao Aladdin API. Create manual dispatches or review delivery orders.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <a :href="sheetUrl" target="_blank" rel="noopener noreferrer" class="btn btn-s shadow-sm">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <span>Sheet</span>
+          </a>
+
+          <a href="/orders.html" class="btn btn-o">
+            &larr; View Orders
+          </a>
+        </div>
+      </div>
+
+      <!-- Main Grid: Dispatch Form & Results -->
+      <div class="grid lg:grid-cols-3 gap-8">
+        
+        <!-- Form Column (2 Cols) -->
+        <div class="lg:col-span-2">
+          <div class="card p-8 shadow-sm">
+            <h2 class="text-base font-black uppercase tracking-wider text-neutral-800 mb-6 flex items-center gap-2">
+              <span>Create Delivery Consignment</span>
+            </h2>
+
+            <!-- Success Notification -->
+            <div x-show="success" x-transition class="mb-6 p-5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl">
+              <div class="flex items-center justify-between">
+                <p class="font-black text-sm flex items-center gap-2">
+                  <span>&check;</span> Consignment Created Successfully!
+                </p>
+                <span class="badge !bg-emerald-600 !text-white !font-bold">STATUS: PENDING</span>
+              </div>
+              <div class="mt-3 p-3 bg-white/70 rounded-xl space-y-1 text-xs mono">
+                <div>Consignment ID: <strong class="text-black text-sm" x-text="responseData?.data?.consignment_id"></strong></div>
+                <div>Delivery Fee: <strong>৳<span x-text="responseData?.data?.delivery_fee"></span></strong></div>
+                <div>Merchant Order ID: <span x-text="responseData?.data?.merchant_order_id"></span></div>
+              </div>
+            </div>
+
+            <!-- Error Notification -->
+            <div x-show="error" x-transition class="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-xs">
+              <p class="font-bold text-sm mb-1">Dispatch Error</p>
+              <p x-text="errorMessage"></p>
+            </div>
+
+            <form @submit.prevent="submitOrder" class="space-y-5">
+              <!-- Store & Merchant Order ID -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="lbl">Select Store ID *</label>
+                  <template x-if="stores.length > 0">
+                    <select class="inp text-xs font-semibold" x-model="form.store_id" required>
+                      <template x-for="st in stores" :key="st.store_id">
+                        <option :value="st.store_id" x-text="st.store_name + ' (ID: ' + st.store_id + ')'"></option>
+                      </template>
+                    </select>
+                  </template>
+                  <template x-if="stores.length === 0">
+                    <input type="number" x-model="form.store_id" required placeholder="e.g. 148556" class="inp mono font-bold">
+                  </template>
+                </div>
+                <div>
+                  <label class="lbl">Merchant Order ID (Optional)</label>
+                  <input type="text" x-model="form.merchant_order_id" class="inp mono font-bold">
+                </div>
+              </div>
+
+              <!-- Recipient Details -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="lbl">Recipient Name *</label>
+                  <input type="text" x-model="form.recipient_name" required minlength="2" placeholder="Full name" class="inp font-semibold">
+                </div>
+                <div>
+                  <label class="lbl">Recipient Phone (11 digits) *</label>
+                  <input type="text" x-model="form.recipient_phone" required pattern="\d{11}" placeholder="01XXXXXXXXX" class="inp mono font-bold">
+                </div>
+              </div>
+
+              <div>
+                <label class="lbl">Recipient Full Address *</label>
+                <textarea x-model="form.recipient_address" required minlength="5" rows="2" placeholder="House, Road, Area, District" class="inp text-xs"></textarea>
+              </div>
+
+              <!-- Order Delivery Attributes -->
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label class="lbl">Delivery Type *</label>
+                  <select x-model="form.delivery_type" required class="inp text-xs font-semibold">
+                    <option value="48">Normal (48h)</option>
+                    <option value="12">On Demand (12h)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="lbl">Item Type *</label>
+                  <select x-model="form.item_type" required class="inp text-xs font-semibold">
+                    <option value="2">Parcel</option>
+                    <option value="1">Document</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="lbl">Amount to Collect (৳) *</label>
+                  <input type="number" min="0" x-model="form.amount_to_collect" required class="inp mono font-black text-sm">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="lbl">Item Quantity *</label>
+                  <input type="number" min="1" x-model="form.item_quantity" required class="inp mono">
+                </div>
+                <div>
+                  <label class="lbl">Weight (KG, 0.5 - 10) *</label>
+                  <input type="number" step="0.1" min="0.5" max="10" x-model="form.item_weight" required class="inp mono">
+                </div>
+              </div>
+
+              <div>
+                <label class="lbl">Special Instructions (Optional)</label>
+                <input type="text" x-model="form.special_instruction" placeholder="e.g. Handle with care, deliver between 2-5pm" class="inp text-xs">
+              </div>
+
+              <!-- Submit Button -->
+              <button 
+                type="submit" 
+                :disabled="loading" 
+                class="w-full btn btn-pathao !py-3 !text-xs font-black shadow-sm"
+              >
+                <span x-show="loading" class="animate-spin mr-2">&#8635;</span>
+                <span x-text="loading ? 'Creating Pathao Consignment...' : 'Dispatch to Pathao Courier'"></span>
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Sidebar Column: Stores & Info (1 Col) -->
+        <div class="space-y-6">
+          <!-- Active Store Card -->
+          <div class="card p-6 shadow-sm">
+            <h3 class="text-xs font-black uppercase tracking-widest text-neutral-400 mb-3">Merchant Information</h3>
+            <div class="space-y-3 text-xs">
+              <div class="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
+                <div class="lbl">Pathao Merchant Account</div>
+                <div class="font-bold text-neutral-900 mt-0.5">Connected (API Sandbox)</div>
+                <div class="text-[10px] text-neutral-400 font-mono mt-1">courier-api-sandbox.pathao.com</div>
+              </div>
+
+              <div class="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
+                <div class="lbl">Loaded Pickup Stores</div>
+                <div class="font-black text-lg mono text-neutral-900" x-text="stores.length"></div>
+                <div class="text-[10px] text-neutral-500 mt-1">Active merchant branches available for pickup.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Navigation Tip -->
+          <div class="card p-6 bg-gradient-to-br from-neutral-900 to-black text-white shadow-sm">
+            <div class="text-xs font-bold uppercase tracking-wider text-red-400 mb-2">Automated Dispatch</div>
+            <h4 class="font-bold text-sm">Did you know?</h4>
+            <p class="text-xs text-neutral-300 mt-1 leading-relaxed">
+              You can dispatch any incoming customer order directly from the <strong>Orders</strong> page! Simply click <strong>"Ship to Pathao"</strong> on any order to have the customer name, phone, address, and amount automatically pre-filled.
+            </p>
+            <a href="/orders.html" class="inline-block mt-4 text-xs font-black text-red-400 hover:text-red-300 underline">
+              Go to Customer Orders &rarr;
+            </a>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast -->
+  <div x-show="toast.visible" class="toast" x-transition>
+    <div class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" x-show="toast.type === 'success'"></div>
+    <div class="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" x-show="toast.type === 'error'"></div>
+    <div class="flex-grow text-xs" x-text="toast.message"></div>
+    <button @click="toast.visible = false" class="text-neutral-400 hover:text-white text-base leading-none">&times;</button>
+  </div>
+
+  <script>
+    function pathaoApp() {
+      return {
+        stores: [],
+        pendingOrdersCount: 0,
+        loading: false,
+        success: false,
+        error: false,
+        errorMessage: '',
+        responseData: null,
+        sheetUrl: localStorage.getItem('rawgad_sheet_url') || 'https://docs.google.com/spreadsheets/',
+
+        form: {
+          store_id: 148556,
+          merchant_order_id: 'MANUAL-' + Date.now(),
+          recipient_name: '',
+          recipient_phone: '',
+          recipient_address: '',
+          delivery_type: 48,
+          item_type: 2,
+          item_quantity: 1,
+          item_weight: 0.5,
+          amount_to_collect: 0,
+          special_instruction: '',
+        },
+
+        toast: { visible: false, message: '', type: 'success', timeout: null },
+
+        showToast(message, type = 'success') {
+          this.toast.message = message;
+          this.toast.type = type;
+          this.toast.visible = true;
+          if (this.toast.timeout) clearTimeout(this.toast.timeout);
+          this.toast.timeout = setTimeout(() => { this.toast.visible = false; }, 4500);
+        },
+
+        init() {
+          this.fetchStores();
+          this.fetchPendingOrdersCount();
+        },
+
+        async fetchStores() {
+          try {
+            const res = await fetch('/api/pathao?action=stores');
+            const data = await res.json();
+            if (data && data.success && data.stores) {
+              this.stores = data.stores;
+              if (this.stores.length > 0 && !this.form.store_id) {
+                this.form.store_id = this.stores[0].store_id;
+              }
+            }
+          } catch (err) {
+            console.warn('Failed to load stores:', err);
+          }
+        },
+
+        async fetchPendingOrdersCount() {
+          try {
+            const res = await fetch('/api/orders');
+            const data = await res.json();
+            if (data && data.success && data.orders) {
+              this.pendingOrdersCount = data.orders.filter(o => o.status === 'pending').length;
+            }
+          } catch (_) {}
+        },
+
+        async submitOrder() {
+          this.loading = true;
+          this.success = false;
+          this.error = false;
+          this.errorMessage = '';
+
+          try {
+            const payload = {
+              ...this.form,
+              store_id: parseInt(this.form.store_id, 10),
+              delivery_type: parseInt(this.form.delivery_type, 10),
+              item_type: parseInt(this.form.item_type, 10),
+              item_quantity: parseInt(this.form.item_quantity, 10),
+              item_weight: parseFloat(this.form.item_weight),
+              amount_to_collect: parseInt(this.form.amount_to_collect, 10),
+            };
+
+            const response = await fetch('/api/pathao', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+              throw new Error(data.error || data.message || 'Failed to create Pathao order');
+            }
+
+            this.responseData = data;
+            this.success = true;
+            this.showToast('Pathao Consignment #' + (data.consignment_id || data.data?.consignment_id) + ' created!');
+
+            // Reset form partially
+            this.form.merchant_order_id = 'MANUAL-' + Date.now();
+            this.form.recipient_name = '';
+            this.form.recipient_phone = '';
+            this.form.recipient_address = '';
+            this.form.special_instruction = '';
+            this.form.amount_to_collect = 0;
+          } catch (err) {
+            this.error = true;
+            this.errorMessage = err.message;
+          } finally {
+            this.loading = false;
+          }
+        }
+      };
+    }
+  </script>
+</body>
+</html>

@@ -127,6 +127,10 @@ module.exports = async function handler(req, res) {
           sender_number: order.sender_number || null,
           verified: !!order.verified,
           status: String(order.status || "pending").toLowerCase(),
+          pathao_consignment_id: order.pathao_consignment_id || null,
+          pathao_order_status: order.pathao_order_status || null,
+          pathao_delivery_fee: order.pathao_delivery_fee || null,
+          pathao_dispatched_at: order.pathao_dispatched_at || null,
           stockRestored,
           stock_restored: stockRestored,
           stockRestoredAt: order.stockRestoredAt || order.stock_restored_at || null,
@@ -291,14 +295,20 @@ module.exports = async function handler(req, res) {
       } else {
         // Status is not cancelled (e.g. pending, confirmed, processing, shipped, delivered)
         // If a cancelled order is later moved to another status, do not automatically deduct stock again
+        const updateFields = {
+          status: newStatus,
+          updated_at: now,
+          updatedAt: now,
+        };
+        if (body.pathao_consignment_id) updateFields.pathao_consignment_id = body.pathao_consignment_id;
+        if (body.pathao_order_status) updateFields.pathao_order_status = body.pathao_order_status;
+        if (body.pathao_delivery_fee) updateFields.pathao_delivery_fee = body.pathao_delivery_fee;
+        if (body.pathao_consignment_id && !existingOrder.pathao_dispatched_at) updateFields.pathao_dispatched_at = now;
+
         await ordersCol.updateOne(
           { _id: existingOrder._id },
           {
-            $set: {
-              status: newStatus,
-              updated_at: now,
-              updatedAt: now,
-            },
+            $set: updateFields,
           }
         );
       }

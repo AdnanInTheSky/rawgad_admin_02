@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orders Management &bull; Rawgad Admin</title>
+  <meta name="robots" content="noindex,nofollow">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Alpine.js CDN -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    [x-cloak] { display: none !important; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    
+    .inp {
+      width: 100%;
+      border: 1px solid #e5e5e5;
+      border-radius: 0.75rem;
+      padding: 0.55rem 0.85rem;
+      font-size: 0.8rem;
+      background: #fafafa;
+      outline: none;
+      transition: all 0.15s;
+    }
+    .inp:focus {
+      border-color: #000;
+      background: #fff;
+      box-shadow: 0 0 0 1px #000;
+    }
+    
+    label.lbl {
+      display: block;
+      font-size: 0.65rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #737373;
+      margin-bottom: 0.35rem;
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.55rem 1rem;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: 1px solid transparent;
+      line-height: 1.2;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-p { background: #000; color: #fff; }
+    .btn-p:hover:not(:disabled) { background: #262626; }
+    .btn-o { background: #fff; color: #000; border-color: #d4d4d4; }
+    .btn-o:hover:not(:disabled) { border-color: #000; background: #fafafa; }
+    .btn-d { background: #fff; color: #dc2626; border-color: #fecaca; }
+    .btn-d:hover:not(:disabled) { background: #fef2f2; border-color: #ef4444; }
+    .btn-s { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+    .btn-s:hover:not(:disabled) { background: #d1fae5; }
+    .btn-pathao { background: #ea1d25; color: #fff; }
+    .btn-pathao:hover:not(:disabled) { background: #c8131a; }
+    
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.62rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      border: 1px solid #e5e5e5;
+      background: #f5f5f5;
+      color: #404040;
+      white-space: nowrap;
+    }
+    
+    .nav-i {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      width: 100%;
+      text-align: left;
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.7rem 0.9rem;
+      border-radius: 0.75rem;
+      color: #a3a3a3;
+      cursor: pointer;
+      border: 1px solid transparent;
+      background: transparent;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+    .nav-i:hover { color: #fff; background: #171717; }
+    .nav-i.on { color: #fff; background: #171717; border-color: #262626; }
+    
+    .card {
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 1.25rem;
+    }
+    
+    table.tbl { width: 100%; font-size: 0.75rem; border-collapse: collapse; }
+    table.tbl th {
+      font-size: 0.62rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #737373;
+      text-align: left;
+      padding: 0.65rem 0.85rem;
+      border-bottom: 1px solid #e5e5e5;
+      white-space: nowrap;
+      background: #fafafa;
+    }
+    table.tbl td {
+      padding: 0.75rem 0.85rem;
+      border-bottom: 1px solid #f5f5f5;
+      vertical-align: middle;
+    }
+    table.tbl tr:hover td { background: #fafafa; }
+    
+    .modal-bg { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(2px); z-index: 60; }
+    .modal { position: fixed; inset: 0; z-index: 70; display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 2rem 1rem; }
+    
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 90;
+      background: #000;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.85rem 1.4rem;
+      border-radius: 0.9rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      max-width: 420px;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    /* Status select pill */
+    .status-select {
+      font-size: 0.68rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.35rem 0.6rem;
+      border-radius: 0.6rem;
+      border: 1px solid #e5e5e5;
+      background-color: #fff;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.15s;
+    }
+    .status-select:focus {
+      box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body class="bg-neutral-100 text-neutral-900 min-h-screen" x-data="ordersApp()" x-init="init()" x-cloak>
+
+  <!-- ================= APP SHELL ================= -->
+  <div class="min-h-screen flex">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="w-64 flex-shrink-0 bg-black text-neutral-400 flex flex-col min-h-screen sticky top-0 h-screen border-r border-neutral-900">
+      <div class="p-6 border-b border-neutral-900">
+        <a href="/" class="flex items-center gap-2 no-underline">
+          <div class="w-3 h-3 bg-white rounded-sm"></div>
+          <span class="font-black text-xl tracking-widest text-white">RAWGAD</span>
+        </a>
+        <div class="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-500 mt-1.5">Admin &bull; Orders &bull; Pathao</div>
+      </div>
+
+      <nav class="p-4 space-y-1.5 flex-grow overflow-y-auto">
+        <!-- Dashboard -->
+        <a href="/" class="nav-i">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+          Dashboard & Analytics
+        </a>
+
+        <!-- Inventory -->
+        <a href="/inventory.html" class="nav-i">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+          Inventory
+        </a>
+
+        <!-- Orders (Active) -->
+        <a href="/orders.html" class="nav-i on">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+          Orders
+          <span x-show="pendingOrdersCount > 0" class="ml-auto bg-amber-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-full" x-text="pendingOrdersCount"></span>
+        </a>
+
+        <!-- Pathao Courier -->
+        <a href="/pathao.html" class="nav-i">
+          <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          Pathao Courier
+        </a>
+
+        <!-- Sheet Quick Link -->
+        <div class="pt-4 mt-4 border-t border-neutral-900">
+          <a :href="sheetUrl" target="_blank" rel="noopener noreferrer" class="nav-i !text-emerald-400 hover:!text-emerald-300 !bg-emerald-950/30 hover:!bg-emerald-950/60 !border-emerald-900/50">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            Google Sheet &rarr;
+          </a>
+        </div>
+      </nav>
+
+      <!-- Sidebar Footer: Status & Refresh -->
+      <div class="p-4 border-t border-neutral-900">
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-neutral-900 text-neutral-400 cursor-pointer hover:bg-neutral-800 transition-colors" @click="checkStatus(true)">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full" :class="dbConnected ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-red-500'"></span>
+            <div>
+              <div class="text-[10px] font-bold uppercase tracking-wider text-white" x-text="dbConnected ? 'paystationdemo' : 'Offline'"></div>
+              <div class="text-[9px] text-neutral-500" x-text="dbConnected ? 'Atlas Connected' : 'Check server'"></div>
+            </div>
+          </div>
+          <button class="text-neutral-500 hover:text-white text-xs" title="Refresh status">&#8635;</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow p-6 lg:p-10 max-w-[1440px] w-full mx-auto">
+
+      <!-- Server Offline Banner -->
+      <div x-show="!dbConnected && !loadingStatus" class="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-900 rounded-2xl flex items-center justify-between text-xs font-semibold">
+        <div class="flex items-center gap-2">
+          <span class="text-red-600 font-bold">&#9888; Server Offline</span>
+          <span class="text-red-700 text-[11px]">&mdash; Unable to reach MongoDB API. Check server connection.</span>
+        </div>
+        <button class="btn btn-o !py-1 !px-3 !text-[9px] !bg-white" @click="checkStatus(true)">&#8635; Retry</button>
+      </div>
+
+      <!-- Top Header & Actions -->
+      <div class="flex items-start justify-between mb-6 flex-wrap gap-4">
+        <div>
+          <h1 class="text-2xl font-black tracking-tight flex items-center gap-2.5">
+            Customer Orders
+            <span class="badge !bg-black !text-white text-xs" x-text="orders.length"></span>
+          </h1>
+          <p class="text-xs text-neutral-500 mt-1">
+            Authoritative order pipeline from MongoDB Atlas (<span class="mono font-semibold">orders</span>). Change status or dispatch directly to Pathao Courier.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-3 flex-wrap">
+          <!-- Google Sheet Button -->
+          <a :href="sheetUrl" target="_blank" rel="noopener noreferrer" class="btn btn-s shadow-sm">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <span>Sheet</span>
+          </a>
+
+          <!-- Refresh Orders -->
+          <button class="btn btn-o" @click="fetchOrders(true)" :disabled="loadingOrders">
+            <span x-show="!loadingOrders">&#8635; Refresh Orders</span>
+            <span x-show="loadingOrders">Loading...</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter & Search Controls -->
+      <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
+        <!-- Status Filter Pills -->
+        <div class="flex gap-2 flex-wrap items-center">
+          <template x-for="st in ['all', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled']" :key="st">
+            <button 
+              class="badge !py-1.5 !px-3 cursor-pointer capitalize" 
+              :class="orderFilter === st && '!bg-black !text-white !border-black'" 
+              @click="orderFilter = st"
+            >
+              <span x-text="st"></span>
+              <span class="opacity-70 ml-1" x-text="'(' + getCountByStatus(st) + ')'"></span>
+            </button>
+          </template>
+        </div>
+
+        <!-- Search Input -->
+        <div class="w-full sm:w-80">
+          <input 
+            class="inp" 
+            placeholder="Search invoice, customer, phone, TrxID, Pathao..." 
+            x-model="orderSearch"
+          >
+        </div>
+      </div>
+
+      <!-- Orders Table Card -->
+      <div class="card overflow-x-auto shadow-sm">
+        <table class="tbl min-w-[1050px]">
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Customer Information</th>
+              <th>Items Ordered</th>
+              <th>Total Amount</th>
+              <th>Payment & Trx</th>
+              <th>Status (Change Inline)</th>
+              <th>Pathao Delivery</th>
+              <th>Order Date</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="order in filteredOrders" :key="order.invoice_number || order._id">
+              <tr>
+                <!-- Invoice / Order ID -->
+                <td>
+                  <div class="font-bold text-xs mono" x-text="order.invoice_number"></div>
+                  <template x-if="order.stock_restored">
+                    <span class="badge !bg-emerald-50 !text-emerald-700 !border-emerald-200 !text-[9px] mt-1 font-bold">&check; Stock Restored</span>
+                  </template>
+                </td>
+
+                <!-- Customer Name, Phone & Address -->
+                <td class="max-w-[220px]">
+                  <div class="font-bold text-xs" x-text="order.customer && order.customer.name"></div>
+                  <div class="text-[11px] text-neutral-700 font-medium mono mt-0.5" x-text="order.customer && order.customer.phone"></div>
+                  <div class="text-[10px] text-neutral-400 truncate mt-0.5" :title="order.customer && order.customer.full_address" x-text="order.customer && order.customer.full_address"></div>
+                </td>
+
+                <!-- Items Summary -->
+                <td class="max-w-[180px]">
+                  <div class="font-bold text-xs" x-text="order.totalItemsCount + ' item(s)'"></div>
+                  <div class="text-[10px] text-neutral-500 truncate mt-0.5" :title="(order.items || []).map(i => (i.name || i.productTitle) + ' x' + (i.qty || 1)).join(', ')" x-text="(order.items || []).map(i => (i.name || i.productTitle) + ' x' + (i.qty || 1)).join(', ')"></div>
+                </td>
+
+                <!-- Payment Amount -->
+                <td>
+                  <div class="font-black text-xs mono" x-text="'BDT ' + fmtNum(order.payment_amount)"></div>
+                  <template x-if="order.delivery_charge > 0">
+                    <div class="text-[9px] text-neutral-400" x-text="'Incl. ৳' + order.delivery_charge + ' delivery'"></div>
+                  </template>
+                </td>
+
+                <!-- Payment Method & TrxID -->
+                <td>
+                  <span class="badge uppercase !font-black" :class="getPaymentBadgeClass(order.payment_method)" x-text="formatPaymentMethod(order.payment_method)"></span>
+                  <template x-if="order.trx_id && order.payment_method !== 'cod'">
+                    <div class="text-[10px] mono text-neutral-600 mt-1 font-semibold" x-text="'Trx: ' + order.trx_id"></div>
+                  </template>
+                  <template x-if="order.sender_number && order.payment_method !== 'cod'">
+                    <div class="text-[9px] text-neutral-500 mt-0.5" x-text="'Sender: ' + order.sender_number"></div>
+                  </template>
+                </td>
+
+                <!-- INLINE STATUS CHANGER -->
+                <td>
+                  <div class="flex items-center gap-1.5">
+                    <select 
+                      class="status-select"
+                      :class="getStatusSelectClass(order.status)"
+                      :value="order.status"
+                      @change="handleStatusChange(order, $event.target.value)"
+                      :disabled="order.updatingStatus"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="confirmed">Confirmed</option>
+                      <option value="processing">Processing</option>
+                      <option value="shipped">Shipped</option>
+                      <option value="delivered">Delivered</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                    <span x-show="order.updatingStatus" class="animate-spin text-xs">&#8635;</span>
+                  </div>
+                </td>
+
+                <!-- Pathao Consignment & Tracking Status -->
+                <td>
+                  <template x-if="order.pathao_consignment_id">
+                    <div>
+                      <span class="badge !bg-red-50 !text-red-700 !border-red-200 !font-mono text-[10px]">
+                        📦 <span x-text="order.pathao_consignment_id"></span>
+                      </span>
+                      <div class="text-[9px] text-neutral-500 mt-0.5" x-text="'Fee: ৳' + (order.pathao_delivery_fee || '—')"></div>
+                    </div>
+                  </template>
+                  <template x-if="!order.pathao_consignment_id">
+                    <span class="text-[10px] text-neutral-400 font-semibold italic">Not dispatched</span>
+                  </template>
+                </td>
+
+                <!-- Date -->
+                <td class="text-[11px] text-neutral-500 whitespace-nowrap" x-text="fmtDate(order.created_at)"></td>
+
+                <!-- Actions: Ship to Pathao & View Details -->
+                <td class="text-right whitespace-nowrap">
+                  <div class="inline-flex items-center gap-2">
+                    <!-- SHIP TO PATHAO BUTTON -->
+                    <button 
+                      class="btn !py-1.5 !px-3 !text-[10px]"
+                      :class="order.pathao_consignment_id ? 'btn-o !border-red-200 !text-red-700 hover:!bg-red-50' : 'btn-pathao'"
+                      @click="openPathaoModal(order)"
+                      :title="order.pathao_consignment_id ? 'Re-dispatch or view Pathao info' : 'Ship with Pathao Courier'"
+                    >
+                      <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                      <span x-text="order.pathao_consignment_id ? 'Re-Ship' : 'Ship to Pathao'"></span>
+                    </button>
+
+                    <!-- View Details Button -->
+                    <button class="btn btn-o !py-1.5 !px-3 !text-[10px]" @click="openOrderModal(order)">
+                      Details &rarr;
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+
+        <div x-show="filteredOrders.length === 0" class="text-center py-16 text-neutral-400">
+          <p class="text-xs font-bold uppercase tracking-wider">No customer orders matched your filter or search.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ================= MODAL: SHIP TO PATHAO ================= -->
+  <div x-show="pathaoModal.open" class="modal-bg" @click="closePathaoModal()"></div>
+  <div x-show="pathaoModal.open" class="modal">
+    <div class="card w-full max-w-2xl p-7 relative" @click.away="closePathaoModal()">
+      <button @click="closePathaoModal()" class="absolute top-6 right-6 text-neutral-400 hover:text-black text-2xl leading-none">&times;</button>
+
+      <!-- Header -->
+      <div class="flex items-center gap-3 mb-5 border-b border-neutral-100 pb-4">
+        <div class="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center font-black text-xl shadow-sm">
+          📦
+        </div>
+        <div>
+          <h2 class="text-lg font-black text-neutral-900">Ship with Pathao Courier</h2>
+          <p class="text-xs text-neutral-500">
+            Pre-filled with order <span class="mono font-bold text-neutral-800" x-text="pathaoModal.form.merchant_order_id"></span>. Review and edit any field before submitting.
+          </p>
+        </div>
+      </div>
+
+      <!-- Success Notification inside Modal -->
+      <div x-show="pathaoModal.success" class="mb-5 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs space-y-1">
+        <div class="font-black text-sm flex items-center gap-2">
+          <span>&check;</span> Order Dispatched to Pathao Successfully!
+        </div>
+        <div>Consignment ID: <span class="mono font-bold text-black" x-text="pathaoModal.result?.consignment_id"></span></div>
+        <div>Delivery Fee: <span class="font-bold">৳<span x-text="pathaoModal.result?.delivery_fee"></span></span></div>
+        <div class="text-[11px] text-emerald-700 mt-1">Order status has been updated to <strong>Shipped</strong> in MongoDB.</div>
+      </div>
+
+      <!-- Error Notification inside Modal -->
+      <div x-show="pathaoModal.error" class="mb-5 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs">
+        <div class="font-bold mb-0.5">Pathao Dispatch Error:</div>
+        <div x-text="pathaoModal.errorMessage"></div>
+      </div>
+
+      <!-- Pathao Pre-filled Form -->
+      <form @submit.prevent="submitPathaoOrder()" class="space-y-4">
+        
+        <!-- Store Selection & Merchant Order ID -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="lbl">Pathao Store *</label>
+            <template x-if="stores.length > 0">
+              <select class="inp text-xs font-semibold" x-model="pathaoModal.form.store_id" required>
+                <template x-for="st in stores" :key="st.store_id">
+                  <option :value="st.store_id" x-text="st.store_name + ' (ID: ' + st.store_id + ')'"></option>
+                </template>
+              </select>
+            </template>
+            <template x-if="stores.length === 0">
+              <input type="number" class="inp mono" x-model="pathaoModal.form.store_id" placeholder="e.g. 148556" required>
+            </template>
+          </div>
+
+          <div>
+            <label class="lbl">Merchant Order / Invoice ID *</label>
+            <input type="text" class="inp mono font-bold" x-model="pathaoModal.form.merchant_order_id" required>
+          </div>
+        </div>
+
+        <!-- Recipient Information (Pre-filled & Editable) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="lbl">Recipient Name *</label>
+            <input type="text" class="inp font-semibold" x-model="pathaoModal.form.recipient_name" required minlength="2">
+          </div>
+          <div>
+            <label class="lbl">Recipient Phone (11 digits) *</label>
+            <input type="text" class="inp mono font-bold" x-model="pathaoModal.form.recipient_phone" required pattern="\d{11}" placeholder="017XXXXXXXX">
+          </div>
+        </div>
+
+        <div>
+          <label class="lbl">Recipient Delivery Address *</label>
+          <textarea class="inp text-xs" rows="2" x-model="pathaoModal.form.recipient_address" required minlength="5"></textarea>
+        </div>
+
+        <!-- Package & Delivery Specifications -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="lbl">Amount to Collect (৳) *</label>
+            <input type="number" min="0" class="inp font-black mono text-sm" x-model="pathaoModal.form.amount_to_collect" required>
+            <div class="text-[10px] text-neutral-500 mt-1" x-text="pathaoModal.paymentHint"></div>
+          </div>
+
+          <div>
+            <label class="lbl">Delivery Type *</label>
+            <select class="inp text-xs font-semibold" x-model="pathaoModal.form.delivery_type">
+              <option value="48">Normal Delivery (48h)</option>
+              <option value="12">On Demand Delivery (12h)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="lbl">Item Type *</label>
+            <select class="inp text-xs font-semibold" x-model="pathaoModal.form.item_type">
+              <option value="2">Parcel</option>
+              <option value="1">Document</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="lbl">Item Quantity *</label>
+            <input type="number" min="1" class="inp mono" x-model="pathaoModal.form.item_quantity" required>
+          </div>
+          <div>
+            <label class="lbl">Weight (KG, 0.5 - 10) *</label>
+            <input type="number" step="0.1" min="0.5" max="10" class="inp mono" x-model="pathaoModal.form.item_weight" required>
+          </div>
+        </div>
+
+        <div>
+          <label class="lbl">Special Instructions / Package Notes</label>
+          <input type="text" class="inp text-xs" placeholder="e.g. Handle with care, contents description" x-model="pathaoModal.form.special_instruction">
+        </div>
+
+        <!-- Modal Actions -->
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-neutral-100">
+          <button type="button" class="btn btn-o" @click="closePathaoModal()">Cancel</button>
+          
+          <button 
+            type="submit" 
+            class="btn btn-pathao !py-2.5 !px-6"
+            :disabled="pathaoModal.submitting"
+          >
+            <span x-show="pathaoModal.submitting" class="animate-spin mr-1.5">&#8635;</span>
+            <span x-text="pathaoModal.submitting ? 'Dispatching to Pathao...' : 'Submit to Pathao Courier'"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: ORDER DETAILS ================= -->
+  <div x-show="orderModal.open" class="modal-bg" @click="closeOrderModal()"></div>
+  <div x-show="orderModal.open" class="modal">
+    <div class="card w-full max-w-2xl p-7 relative" @click.away="closeOrderModal()">
+      <button @click="closeOrderModal()" class="absolute top-6 right-6 text-neutral-400 hover:text-black text-2xl leading-none">&times;</button>
+
+      <template x-if="orderModal.order">
+        <div>
+          <!-- Header -->
+          <div class="flex justify-between items-start mb-6 border-b border-neutral-100 pb-4">
+            <div>
+              <div class="lbl">Order Details</div>
+              <h2 class="text-xl font-black mono" x-text="orderModal.order.invoice_number"></h2>
+              <div class="text-xs text-neutral-500 mt-1">Placed on <span x-text="fmtDate(orderModal.order.created_at)"></span></div>
+            </div>
+            
+            <div class="flex flex-col items-end gap-2">
+              <span class="badge uppercase text-xs !py-1 !px-3" :class="getOrderStatusBadgeClass(orderModal.order.status)" x-text="orderModal.order.status"></span>
+              <template x-if="orderModal.order.pathao_consignment_id">
+                <span class="badge !bg-red-50 !text-red-700 !border-red-200 mono text-[10px]">
+                  Pathao: <span x-text="orderModal.order.pathao_consignment_id"></span>
+                </span>
+              </template>
+            </div>
+          </div>
+
+          <!-- Customer Info -->
+          <div class="grid sm:grid-cols-2 gap-4 p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-xs mb-5">
+            <div>
+              <div class="lbl">Customer Info</div>
+              <div class="font-black text-sm" x-text="orderModal.order.customer?.name || 'N/A'"></div>
+              <div class="text-neutral-700 mt-1 font-semibold mono" x-text="orderModal.order.customer?.phone || 'N/A'"></div>
+              <div class="text-neutral-400 mt-0.5" x-text="orderModal.order.customer?.email || 'N/A'"></div>
+            </div>
+            <div>
+              <div class="lbl">Shipping Address</div>
+              <p class="text-neutral-700 leading-relaxed font-medium" x-text="orderModal.order.customer?.full_address || 'N/A'"></p>
+            </div>
+          </div>
+
+          <!-- Payment Info -->
+          <div class="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-xs mb-5">
+            <div class="lbl">Payment Details</div>
+            <div class="flex items-center justify-between flex-wrap gap-2 mt-1">
+              <div>
+                <span class="text-neutral-500 font-semibold">Method:</span>
+                <span class="font-black uppercase ml-1" x-text="formatPaymentMethod(orderModal.order.payment_method)"></span>
+              </div>
+              <template x-if="orderModal.order.trx_id && orderModal.order.payment_method !== 'cod'">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-neutral-500 font-semibold">TrxID:</span>
+                  <span class="font-black mono bg-white px-2 py-0.5 rounded border border-neutral-200" x-text="orderModal.order.trx_id"></span>
+                </div>
+              </template>
+              <template x-if="orderModal.order.payment_method === 'cod'">
+                <span class="text-neutral-600 font-semibold">Cash On Delivery</span>
+              </template>
+            </div>
+            <template x-if="orderModal.order.sender_number && orderModal.order.payment_method !== 'cod'">
+              <div class="mt-2 pt-2 border-t border-neutral-200 flex items-center gap-2">
+                <span class="text-neutral-500 font-semibold">Sender Phone:</span>
+                <span class="font-black mono" x-text="orderModal.order.sender_number"></span>
+              </div>
+            </template>
+          </div>
+
+          <!-- Items Table -->
+          <div class="mb-5 border border-neutral-200 rounded-xl overflow-hidden">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>Product Item</th>
+                  <th>Quantity</th>
+                  <th>Unit Price</th>
+                  <th class="text-right">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="item in (orderModal.order.items || [])" :key="item.id || item.productId">
+                  <tr>
+                    <td>
+                      <div class="font-bold text-xs" x-text="item.name || item.productTitle"></div>
+                      <div class="text-[10px] text-neutral-500" x-text="(item.typeTitle ? item.typeTitle : '') + (item.subTitle ? ' &bull; ' + item.subTitle : '')"></div>
+                    </td>
+                    <td class="font-bold mono" x-text="item.qty"></td>
+                    <td x-text="'BDT ' + fmtNum(item.price)"></td>
+                    <td class="text-right font-black mono" x-text="'BDT ' + fmtNum(item.subtotal)"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Price Summary -->
+          <div class="p-3 bg-neutral-50 rounded-xl flex flex-col items-end gap-1 text-xs mb-6">
+            <div class="flex justify-between w-48 text-neutral-500">
+              <span>Subtotal:</span>
+              <span class="font-semibold mono" x-text="'BDT ' + fmtNum(orderModal.order.subtotal)"></span>
+            </div>
+            <template x-if="orderModal.order.delivery_charge > 0">
+              <div class="flex justify-between w-48 text-neutral-500">
+                <span>Delivery:</span>
+                <span class="font-semibold mono" x-text="'BDT ' + fmtNum(orderModal.order.delivery_charge)"></span>
+              </div>
+            </template>
+            <div class="flex justify-between w-48 pt-2 border-t border-neutral-200 font-black text-sm">
+              <span>Total:</span>
+              <span class="mono" x-text="'BDT ' + fmtNum(orderModal.order.payment_amount)"></span>
+            </div>
+          </div>
+
+          <!-- Footer Actions -->
+          <div class="flex items-center justify-between pt-4 border-t border-neutral-100 flex-wrap gap-3">
+            <button 
+              class="btn btn-pathao"
+              @click="closeOrderModal(); openPathaoModal(orderModal.order)"
+            >
+              📦 <span x-text="orderModal.order.pathao_consignment_id ? 'Re-Ship to Pathao' : 'Ship to Pathao'"></span>
+            </button>
+
+            <button class="btn btn-o" @click="closeOrderModal()">Close</button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- ================= TOAST NOTIFICATION ================= -->
+  <div x-show="toast.visible" class="toast" x-transition>
+    <div class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" x-show="toast.type === 'success'"></div>
+    <div class="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" x-show="toast.type === 'error'"></div>
+    <div class="flex-grow text-xs" x-text="toast.message"></div>
+    <button @click="toast.visible = false" class="text-neutral-400 hover:text-white text-base leading-none">&times;</button>
+  </div>
+
+  <!-- ================= ALPINE.JS CLIENT LOGIC ================= -->
+  <script>
+    function ordersApp() {
+      return {
+        // System state
+        dbConnected: false,
+        loadingStatus: false,
+        sheetUrl: localStorage.getItem('rawgad_sheet_url') || 'https://docs.google.com/spreadsheets/',
+
+        // Stores state
+        stores: [],
+
+        // Orders state
+        orders: [],
+        loadingOrders: false,
+        orderSearch: '',
+        orderFilter: 'all',
+
+        // Order Detail Modal
+        orderModal: {
+          open: false,
+          order: null,
+        },
+
+        // Ship to Pathao Modal
+        pathaoModal: {
+          open: false,
+          order: null,
+          submitting: false,
+          success: false,
+          error: false,
+          errorMessage: '',
+          paymentHint: '',
+          result: null,
+          form: {
+            store_id: '',
+            merchant_order_id: '',
+            recipient_name: '',
+            recipient_phone: '',
+            recipient_address: '',
+            delivery_type: 48,
+            item_type: 2,
+            item_quantity: 1,
+            item_weight: 0.5,
+            amount_to_collect: 0,
+            special_instruction: '',
+          }
+        },
+
+        // Toast
+        toast: {
+          visible: false,
+          message: '',
+          type: 'success',
+          timeout: null,
+        },
+
+        showToast(message, type = 'success') {
+          this.toast.message = message;
+          this.toast.type = type;
+          this.toast.visible = true;
+          if (this.toast.timeout) clearTimeout(this.toast.timeout);
+          this.toast.timeout = setTimeout(() => {
+            this.toast.visible = false;
+          }, 4500);
+        },
+
+        init() {
+          this.checkStatus();
+          this.fetchOrders();
+          this.fetchStores();
+        },
+
+        async checkStatus(manual = false) {
+          this.loadingStatus = true;
+          try {
+            const res = await fetch('/api/inventory?status=true');
+            const data = await res.json();
+            if (data && data.success) {
+              this.dbConnected = !!data.connected;
+              if (manual) this.showToast('MongoDB Atlas connection healthy.');
+            } else {
+              this.dbConnected = false;
+              if (manual) this.showToast('Database connection offline.', 'error');
+            }
+          } catch (err) {
+            this.dbConnected = false;
+            if (manual) this.showToast('Unable to reach status endpoint.', 'error');
+          } finally {
+            this.loadingStatus = false;
+          }
+        },
+
+        async fetchStores() {
+          try {
+            const res = await fetch('/api/pathao?action=stores');
+            const data = await res.json();
+            if (data && data.success && data.stores) {
+              this.stores = data.stores;
+            }
+          } catch (err) {
+            console.warn('Failed to load Pathao stores:', err);
+          }
+        },
+
+        async fetchOrders(notify = false) {
+          this.loadingOrders = true;
+          try {
+            const res = await fetch('/api/orders');
+            const data = await res.json();
+            if (data && data.success) {
+              this.orders = (data.orders || []).map(o => ({ ...o, updatingStatus: false }));
+              this.dbConnected = true;
+              if (notify) this.showToast(`Loaded ${this.orders.length} orders from database.`);
+            } else {
+              this.showToast(data.error || 'Failed to fetch orders.', 'error');
+            }
+          } catch (err) {
+            console.error('Fetch orders error:', err);
+            this.showToast('Network error while fetching orders.', 'error');
+          } finally {
+            this.loadingOrders = false;
+          }
+        },
+
+        // ================= STATUS CHANGE LOGIC =================
+        async handleStatusChange(order, newStatus) {
+          if (!order || order.status === newStatus) return;
+
+          // If user changes to cancelled, confirm stock restoration
+          if (newStatus === 'cancelled') {
+            const itemCount = order.totalItemsCount || (order.items || []).reduce((s, i) => s + (i.qty || 1), 0);
+            const confirmed = window.confirm(
+              `Cancel order #${order.invoice_number}?\n\nThis will automatically restore ${itemCount} item(s) back to inventory in MongoDB.`
+            );
+            if (!confirmed) {
+              // Revert select display
+              this.$nextTick(() => { this.fetchOrders(); });
+              return;
+            }
+          }
+
+          order.updatingStatus = true;
+          try {
+            const res = await fetch('/api/orders', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                invoice_number: order.invoice_number,
+                status: newStatus,
+              })
+            });
+            const data = await res.json();
+            if (data && data.success) {
+              order.status = data.status;
+              order.updated_at = data.updated_at;
+              if (data.stockRestored) {
+                order.stock_restored = true;
+                this.showToast(`Order #${order.invoice_number} cancelled. Stock restored to inventory!`);
+              } else {
+                this.showToast(`Order #${order.invoice_number} status updated to ${data.status.toUpperCase()}`);
+              }
+            } else {
+              this.showToast(data.error || 'Failed to update order status.', 'error');
+              await this.fetchOrders();
+            }
+          } catch (err) {
+            console.error('Status update error:', err);
+            this.showToast('Network error updating status.', 'error');
+            await this.fetchOrders();
+          } finally {
+            order.updatingStatus = false;
+          }
+        },
+
+        // ================= PATHAO PRE-FILL & DISPATCH =================
+        openPathaoModal(order) {
+          this.pathaoModal.order = order;
+          this.pathaoModal.success = false;
+          this.pathaoModal.error = false;
+          this.pathaoModal.errorMessage = '';
+          this.pathaoModal.result = null;
+
+          // Clean phone: ensure 11 digits starting with 01
+          let rawPhone = String(order.customer?.phone || '').replace(/[^0-9]/g, '');
+          if (rawPhone.startsWith('880')) rawPhone = '0' + rawPhone.slice(3);
+          if (rawPhone.length > 11 && rawPhone.startsWith('88')) rawPhone = rawPhone.slice(2);
+
+          // Determine default store
+          let defaultStore = this.stores[0] ? this.stores[0].store_id : 148556;
+
+          // Amount to collect: if COD, full payment_amount; if paid via bKash/Nagad, 0
+          const isCod = String(order.payment_method || '').toLowerCase() === 'cod';
+          const collectAmount = isCod ? Math.round(Number(order.payment_amount) || 0) : 0;
+          this.pathaoModal.paymentHint = isCod 
+            ? `COD Order: pre-filled with order total (৳${collectAmount})` 
+            : `Pre-paid via ${order.payment_method.toUpperCase()}: collect amount set to ৳0`;
+
+          // Generate instructions from order items
+          const itemsSummary = (order.items || []).map(i => `${i.name || i.productTitle} x${i.qty || 1}`).join(', ');
+
+          this.pathaoModal.form = {
+            store_id: defaultStore,
+            merchant_order_id: order.invoice_number,
+            recipient_name: order.customer?.name || '',
+            recipient_phone: rawPhone,
+            recipient_address: order.customer?.full_address || '',
+            delivery_type: 48,
+            item_type: 2,
+            item_quantity: order.totalItemsCount || (order.items || []).reduce((s, i) => s + (i.qty || 1), 1),
+            item_weight: 0.5,
+            amount_to_collect: collectAmount,
+            special_instruction: itemsSummary.slice(0, 100),
+          };
+
+          this.pathaoModal.open = true;
+        },
+
+        closePathaoModal() {
+          this.pathaoModal.open = false;
+          this.pathaoModal.order = null;
+        },
+
+        async submitPathaoOrder() {
+          this.pathaoModal.submitting = true;
+          this.pathaoModal.error = false;
+          this.pathaoModal.success = false;
+          this.pathaoModal.errorMessage = '';
+
+          try {
+            const payload = {
+              ...this.pathaoModal.form,
+              store_id: parseInt(this.pathaoModal.form.store_id, 10),
+              delivery_type: parseInt(this.pathaoModal.form.delivery_type, 10),
+              item_type: parseInt(this.pathaoModal.form.item_type, 10),
+              item_quantity: parseInt(this.pathaoModal.form.item_quantity, 10),
+              item_weight: parseFloat(this.pathaoModal.form.item_weight),
+              amount_to_collect: parseInt(this.pathaoModal.form.amount_to_collect, 10),
+            };
+
+            const res = await fetch('/api/pathao', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+              const errMsg = data.error || data.message || 'Failed to dispatch order to Pathao.';
+              throw new Error(errMsg);
+            }
+
+            this.pathaoModal.result = data.data || data;
+            this.pathaoModal.success = true;
+
+            // Update order in local table
+            if (this.pathaoModal.order) {
+              this.pathaoModal.order.pathao_consignment_id = data.consignment_id || data.data?.consignment_id;
+              this.pathaoModal.order.pathao_delivery_fee = data.delivery_fee || data.data?.delivery_fee;
+              this.pathaoModal.order.status = 'shipped';
+            }
+
+            this.showToast(`Pathao Consignment #${data.consignment_id || data.data?.consignment_id} created successfully!`);
+          } catch (err) {
+            console.error('Pathao dispatch error:', err);
+            this.pathaoModal.error = true;
+            this.pathaoModal.errorMessage = err.message || 'Error communicating with Pathao API.';
+          } finally {
+            this.pathaoModal.submitting = false;
+          }
+        },
+
+        // ================= ORDER DETAIL MODAL =================
+        openOrderModal(order) {
+          this.orderModal.order = order;
+          this.orderModal.open = true;
+        },
+
+        closeOrderModal() {
+          this.orderModal.open = false;
+          this.orderModal.order = null;
+        },
+
+        // ================= COMPUTED & FILTERS =================
+        get filteredOrders() {
+          const q = (this.orderSearch || '').toLowerCase().trim();
+          return this.orders.filter(o => {
+            if (this.orderFilter !== 'all' && o.status !== this.orderFilter) return false;
+            if (q) {
+              const inv = (o.invoice_number || '').toLowerCase();
+              const name = (o.customer?.name || '').toLowerCase();
+              const phone = (o.customer?.phone || '').toLowerCase();
+              const trx = (o.trx_id || '').toLowerCase();
+              const consignment = (o.pathao_consignment_id || '').toLowerCase();
+              const match = inv.includes(q) || name.includes(q) || phone.includes(q) || trx.includes(q) || consignment.includes(q);
+              if (!match) return false;
+            }
+            return true;
+          });
+        },
+
+        get pendingOrdersCount() {
+          return this.orders.filter(o => o.status === 'pending').length;
+        },
+
+        getCountByStatus(st) {
+          if (st === 'all') return this.orders.length;
+          return this.orders.filter(o => o.status === st).length;
+        },
+
+        // ================= STYLING HELPERS =================
+        getStatusSelectClass(st) {
+          const s = String(st || '').toLowerCase();
+          if (s === 'delivered') return 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold';
+          if (s === 'shipped') return 'bg-indigo-50 text-indigo-800 border-indigo-300 font-bold';
+          if (s === 'processing') return 'bg-purple-50 text-purple-800 border-purple-300 font-bold';
+          if (s === 'confirmed') return 'bg-blue-50 text-blue-800 border-blue-300 font-bold';
+          if (s === 'pending') return 'bg-amber-50 text-amber-800 border-amber-300 font-bold';
+          if (s === 'cancelled') return 'bg-red-50 text-red-800 border-red-300 font-bold';
+          return 'bg-neutral-50 text-neutral-800 border-neutral-300';
+        },
+
+        getOrderStatusBadgeClass(status) {
+          const s = String(status || '').toLowerCase();
+          if (s === 'delivered') return '!bg-emerald-50 !text-emerald-700 !border-emerald-200';
+          if (s === 'shipped') return '!bg-indigo-50 !text-indigo-700 !border-indigo-200';
+          if (s === 'processing') return '!bg-purple-50 !text-purple-700 !border-purple-200';
+          if (s === 'confirmed') return '!bg-blue-50 !text-blue-700 !border-blue-200';
+          if (s === 'pending') return '!bg-amber-50 !text-amber-700 !border-amber-200';
+          if (s === 'cancelled') return '!bg-red-50 !text-red-700 !border-red-200';
+          return '!bg-neutral-100 !text-neutral-700';
+        },
+
+        getPaymentBadgeClass(m) {
+          const lower = String(m || '').toLowerCase();
+          if (lower === 'bkash') return '!bg-pink-50 !text-pink-700 !border-pink-200';
+          if (lower === 'nagad') return '!bg-orange-50 !text-orange-700 !border-orange-200';
+          if (lower === 'cod') return '!bg-neutral-100 !text-neutral-700 !border-neutral-300';
+          return '!bg-neutral-100 !text-neutral-700';
+        },
+
+        formatPaymentMethod(m) {
+          if (!m) return 'COD';
+          const lower = String(m).toLowerCase();
+          if (lower === 'cod') return 'COD';
+          if (lower === 'bkash') return 'bKash';
+          if (lower === 'nagad') return 'Nagad';
+          return m.toUpperCase();
+        },
+
+        fmtNum(val) {
+          const n = Number(val) || 0;
+          return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
+
+        fmtDate(d) {
+          if (!d) return '—';
+          try {
+            const date = new Date(d);
+            if (isNaN(date.getTime())) return '—';
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+          } catch (_) {
+            return '—';
+          }
+        }
+      };
+    }
+  </script>
+</body>
+</html>

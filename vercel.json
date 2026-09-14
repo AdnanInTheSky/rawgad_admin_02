@@ -6,6 +6,9 @@
     { "source": "/api/inventory/(.*)", "destination": "/api/inventory.js" },
     { "source": "/api/inventory", "destination": "/api/inventory.js" },
     { "source": "/api/orders/(.*)", "destination": "/api/orders.js" },
-    { "source": "/api/orders", "destination": "/api/orders.js" }
+    { "source": "/api/orders", "destination": "/api/orders.js" },
+    { "source": "/api/create-order", "destination": "/api/pathao.js" },
+    { "source": "/api/pathao/(.*)", "destination": "/api/pathao.js" },
+    { "source": "/api/pathao", "destination": "/api/pathao.js" }
   ]
 }
