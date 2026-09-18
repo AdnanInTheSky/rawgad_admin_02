@@ -279,12 +279,49 @@
         </div>
       </div>
 
-      <!-- Search & Filter Controls -->
+      <!-- View Mode & Top Controls Bar -->
       <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <!-- View Switcher -->
+        <div class="inline-flex rounded-xl bg-neutral-200/80 p-1">
+          <button 
+            type="button"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+            :class="viewMode === 'nested' ? 'bg-white text-black shadow-sm' : 'text-neutral-600 hover:text-black'"
+            @click="viewMode = 'nested'"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h16"></path></svg>
+            <span>Nested Hierarchy</span>
+            <span class="badge !py-0.5 !px-1.5 !text-[9px]" :class="viewMode === 'nested' ? '!bg-black !text-white' : ''" x-text="nestedProducts.length"></span>
+          </button>
+          <button 
+            type="button"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+            :class="viewMode === 'flat' ? 'bg-white text-black shadow-sm' : 'text-neutral-600 hover:text-black'"
+            @click="viewMode = 'flat'"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+            <span>Flat SKU List</span>
+            <span class="badge !py-0.5 !px-1.5 !text-[9px]" :class="viewMode === 'flat' ? '!bg-black !text-white' : ''" x-text="inventory.length"></span>
+          </button>
+        </div>
+
+        <!-- Search Input -->
+        <div class="w-full sm:w-80">
+          <input 
+            class="inp" 
+            placeholder="Search product, variant, ID, slug, tab..." 
+            x-model="invSearch"
+          >
+        </div>
+      </div>
+
+      <!-- Filter Controls: Stock Status, Tabs & Expand Actions -->
+      <div class="flex items-center justify-between mb-5 flex-wrap gap-3 pb-3 border-b border-neutral-200">
         <!-- Filter Pills -->
         <div class="flex gap-2 flex-wrap items-center">
+          <!-- Stock Status Pills -->
           <button class="badge !py-1.5 !px-3 cursor-pointer" :class="invFilter === 'all' && '!bg-black !text-white !border-black'" @click="invFilter = 'all'">
-            All (<span x-text="inventory.length"></span>)
+            All Stock (<span x-text="inventory.length"></span>)
           </button>
           <button class="badge !py-1.5 !px-3 cursor-pointer" :class="invFilter === 'in_stock' && '!bg-black !text-white !border-black'" @click="invFilter = 'in_stock'">
             In Stock (<span x-text="invSummary.inStock"></span>)
@@ -298,25 +335,355 @@
           <button x-show="invSummary.unmatched > 0" class="badge !py-1.5 !px-3 cursor-pointer !bg-amber-100 !text-amber-800 !border-amber-300" :class="invFilter === 'unmatched' && '!bg-amber-600 !text-white !border-amber-600'" @click="invFilter = 'unmatched'">
             Unmatched (<span x-text="invSummary.unmatched"></span>)
           </button>
+
+          <!-- Tab Filter Pills (dynamically derived from live products.json) -->
+          <template x-if="availableTabs.length > 0">
+            <div class="inline-flex items-center gap-1.5">
+              <span class="text-neutral-300 mx-1">|</span>
+              <button class="badge !py-1.5 !px-3 cursor-pointer" :class="invTabFilter === 'all' && '!bg-neutral-800 !text-white !border-neutral-800'" @click="invTabFilter = 'all'">
+                All Tabs
+              </button>
+              <template x-for="tabName in availableTabs" :key="tabName">
+                <button 
+                  type="button"
+                  class="badge !py-1.5 !px-3 cursor-pointer capitalize" 
+                  :class="invTabFilter === tabName ? '!bg-black !text-white !border-black' : '!bg-neutral-100 !text-neutral-800'" 
+                  @click="invTabFilter = tabName"
+                >
+                  <span x-text="'Tab: ' + tabName"></span>
+                </button>
+              </template>
+            </div>
+          </template>
         </div>
 
-        <!-- Search Input -->
-        <div class="w-full sm:w-80">
-          <input 
-            class="inp" 
-            placeholder="Search product, variant, ID..." 
-            x-model="invSearch"
-          >
+        <!-- Nested View Expand/Collapse Actions -->
+        <div x-show="viewMode === 'nested'" class="flex items-center gap-2">
+          <button class="btn btn-o !py-1 !px-2.5 !text-[10px]" @click="expandAll()" title="Expand all products">
+            <span>&#9662; Expand All</span>
+          </button>
+          <button class="btn btn-o !py-1 !px-2.5 !text-[10px]" @click="collapseAll()" title="Collapse all products">
+            <span>&#9656; Collapse All</span>
+          </button>
         </div>
       </div>
 
-      <!-- Inventory Table Card -->
-      <div class="card overflow-x-auto shadow-sm">
-        <table class="tbl min-w-[980px]">
+      <!-- ==================================================== -->
+      <!-- 1. NESTED VIEW TABLE (Default)                      -->
+      <!-- Grouped by product -> types -> subProducts           -->
+      <!-- Each part maintains its own separate stock system     -->
+      <!-- ==================================================== -->
+      <div x-show="viewMode === 'nested'" class="card overflow-x-auto shadow-sm">
+        <table class="tbl min-w-[1050px]">
+          <thead>
+            <tr>
+              <th class="w-10 text-center"></th>
+              <th class="w-12">Item</th>
+              <th>Product Information</th>
+              <th>Product Page</th>
+              <th>Tab</th>
+              <th>Catalog Price</th>
+              <th>Total / Live Stock</th>
+              <th>Stock Status</th>
+              <th class="text-right">Manage Stock</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="product in filteredNestedProducts" :key="product.productId">
+              <!-- Group Fragment -->
+              <tr class="hover:bg-neutral-50/80 transition-colors border-b border-neutral-200" :class="isExpanded(product.productId) && product.hasTypes ? 'bg-neutral-50/40' : ''">
+                <!-- Expand / Collapse Toggle -->
+                <td class="text-center">
+                  <template x-if="product.hasTypes">
+                    <button 
+                      type="button"
+                      class="w-7 h-7 inline-flex items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 hover:text-black hover:border-black transition-all shadow-xs cursor-pointer"
+                      @click="toggleExpand(product.productId)"
+                      :title="isExpanded(product.productId) ? 'Collapse variants' : 'Expand variants'"
+                    >
+                      <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="isExpanded(product.productId) ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                      </svg>
+                    </button>
+                  </template>
+                  <template x-if="!product.hasTypes">
+                    <span class="text-neutral-300 font-bold text-xs">&bull;</span>
+                  </template>
+                </td>
+
+                <!-- Product Thumbnail -->
+                <td>
+                  <img 
+                    :src="product.imageSrc || 'https://placehold.co/80x80/e2e8f0/64748b?text=Item'" 
+                    class="w-10 h-10 rounded-lg object-cover bg-neutral-100 border border-neutral-200"
+                    onerror="this.src='https://placehold.co/80x80/e2e8f0/64748b?text=Item'"
+                  >
+                </td>
+
+                <!-- Product Info -->
+                <td>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="font-bold text-xs text-neutral-900" x-text="product.title"></span>
+                    <template x-if="product.hasTypes">
+                      <span class="badge !text-[9px] !bg-neutral-100 !text-neutral-700" x-text="product.types.length + ' Types &bull; ' + product.totalVariants + ' Variants'"></span>
+                    </template>
+                    <template x-if="!product.hasTypes">
+                      <span class="badge !text-[9px] !bg-emerald-50 !text-emerald-700 !border-emerald-200">Standalone Item</span>
+                    </template>
+                  </div>
+                  <div class="text-[10px] mono text-neutral-400 mt-0.5" x-text="'ID: ' + product.productId"></div>
+                </td>
+
+                <!-- Product Page Column (NEW 1) -->
+                <td>
+                  <template x-if="product.productUrl">
+                    <a 
+                      :href="product.productUrl" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      class="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50/80 hover:bg-blue-100 px-2.5 py-1 rounded-lg border border-blue-200 transition-colors group"
+                      title="Open storefront product page"
+                    >
+                      <span class="mono text-[11px] font-bold">/<span x-text="product.slug"></span></span>
+                      <svg class="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    </a>
+                  </template>
+                  <template x-if="!product.productUrl">
+                    <span class="text-neutral-400 text-xs">—</span>
+                  </template>
+                </td>
+
+                <!-- Tab Column (NEW 2) -->
+                <td>
+                  <span 
+                    class="badge uppercase font-bold text-[10px]" 
+                    :class="getTabBadgeClass(product.tab)"
+                    x-text="product.tab || '—'"
+                  ></span>
+                </td>
+
+                <!-- Catalog Price -->
+                <td class="font-bold text-xs" x-text="'BDT ' + fmtNum(product.price)"></td>
+
+                <!-- Stock Column (Live aggregate or direct) -->
+                <td>
+                  <template x-if="product.hasTypes">
+                    <div class="flex items-baseline gap-1">
+                      <span class="text-sm font-black mono" :class="product.totalStock <= 0 ? 'text-red-600' : (product.totalStock <= 5 ? 'text-amber-600' : 'text-neutral-900')" x-text="product.totalStock"></span>
+                      <span class="text-[9px] text-neutral-400 font-bold uppercase">units</span>
+                    </div>
+                  </template>
+                  <template x-if="!product.hasTypes">
+                    <div class="text-sm font-black mono" :class="product.stock <= 0 ? 'text-red-600' : (product.stock <= 5 ? 'text-amber-600' : 'text-neutral-900')" x-text="product.stock"></div>
+                  </template>
+                </td>
+
+                <!-- Stock Status -->
+                <td>
+                  <span 
+                    class="badge uppercase text-[10px]" 
+                    :class="product.status === 'out_of_stock' ? '!bg-red-50 !text-red-700 !border-red-200' : (product.status === 'low_stock' ? '!bg-amber-50 !text-amber-700 !border-amber-200' : '!bg-emerald-50 !text-emerald-700 !border-emerald-200')"
+                    x-text="product.status === 'out_of_stock' ? 'Out of Stock' : (product.status === 'low_stock' ? 'Low Stock' : 'In Stock')"
+                  ></span>
+                </td>
+
+                <!-- Manage Stock Column -->
+                <td class="text-right whitespace-nowrap">
+                  <template x-if="product.hasTypes">
+                    <button 
+                      class="btn btn-o !py-1 !px-2.5 !text-[10px]" 
+                      @click="toggleExpand(product.productId)"
+                    >
+                      <span x-text="isExpanded(product.productId) ? 'Hide Variants ▲' : 'View Variants (' + product.totalVariants + ') ▼'"></span>
+                    </button>
+                  </template>
+                  <template x-if="!product.hasTypes">
+                    <!-- Standalone product: separate stock controls -->
+                    <div class="inline-flex items-center gap-1.5">
+                      <button 
+                        class="btn btn-o !p-1.5 !text-[10px] !rounded-md" 
+                        title="Decrease stock by 1"
+                        :disabled="product.stock <= 0"
+                        @click="quickAdjustNestedStock(product, -1)"
+                      >-1</button>
+                      <button 
+                        class="btn btn-o !p-1.5 !text-[10px] !rounded-md" 
+                        title="Increase stock by 1"
+                        @click="quickAdjustNestedStock(product, 1)"
+                      >+1</button>
+                      <button 
+                        class="btn btn-o !p-1.5 !text-[10px] !rounded-md" 
+                        title="Increase stock by 5"
+                        @click="quickAdjustNestedStock(product, 5)"
+                      >+5</button>
+                      <button 
+                        class="btn btn-p !py-1.5 !px-3 !text-[10px]" 
+                        @click="openStockModal(product)"
+                      >Set Stock</button>
+                    </div>
+                  </template>
+                </td>
+              </tr>
+
+              <!-- Expanded Nested Children Sub-block -->
+              <tr x-show="product.hasTypes && isExpanded(product.productId)" class="bg-neutral-50/50">
+                <td colspan="9" class="p-4 pl-12 border-b border-neutral-200">
+                  <div class="space-y-4">
+                    <!-- Types loop -->
+                    <template x-for="type in product.types" :key="type.typeId">
+                      <div class="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-xs">
+                        <!-- Type Header Bar -->
+                        <div class="p-3 bg-neutral-100/60 border-b border-neutral-200 flex items-center justify-between flex-wrap gap-2">
+                          <div class="flex items-center gap-2.5">
+                            <img 
+                              :src="type.imageSrc || product.imageSrc || 'https://placehold.co/60x60/e2e8f0/64748b?text=Type'" 
+                              class="w-7 h-7 rounded-md object-cover bg-neutral-100 border border-neutral-200"
+                              onerror="this.src='https://placehold.co/60x60/e2e8f0/64748b?text=Type'"
+                            >
+                            <div>
+                              <div class="font-black text-xs text-neutral-900" x-text="type.title"></div>
+                              <div class="text-[9px] mono text-neutral-400" x-text="'Type ID: ' + type.typeId"></div>
+                            </div>
+                          </div>
+                          
+                          <div class="flex items-center gap-3">
+                            <template x-if="type.hasSubProducts">
+                              <div class="flex items-center gap-2 text-xs">
+                                <span class="text-neutral-500 font-semibold text-[11px]" x-text="type.subProducts.length + ' options'"></span>
+                                <span class="text-neutral-300">&bull;</span>
+                                <span class="font-bold text-neutral-700">Subtotal Stock:</span>
+                                <span class="font-black mono text-xs" :class="type.totalStock <= 0 ? 'text-red-600' : 'text-neutral-900'" x-text="type.totalStock + ' units'"></span>
+                              </div>
+                            </template>
+                            <template x-if="!type.hasSubProducts">
+                              <!-- Direct stock controls if type has NO subproducts -->
+                              <div class="flex items-center gap-3">
+                                <div class="font-bold text-xs" x-text="'BDT ' + fmtNum(type.price)"></div>
+                                <div class="font-black mono text-sm" :class="type.stock <= 0 ? 'text-red-600' : (type.stock <= 5 ? 'text-amber-600' : 'text-neutral-900')" x-text="type.stock"></div>
+                                <span 
+                                  class="badge uppercase text-[9px]" 
+                                  :class="type.stock <= 0 ? '!bg-red-50 !text-red-700 !border-red-200' : (type.stock <= 5 ? '!bg-amber-50 !text-amber-700 !border-amber-200' : '!bg-emerald-50 !text-emerald-700 !border-emerald-200')"
+                                  x-text="type.stock <= 0 ? 'Out of Stock' : (type.stock <= 5 ? 'Low Stock' : 'In Stock')"
+                                ></span>
+                                <div class="inline-flex items-center gap-1">
+                                  <button class="btn btn-o !p-1 !text-[10px] !rounded" :disabled="type.stock <= 0" @click="quickAdjustNestedStock(type, -1)">-1</button>
+                                  <button class="btn btn-o !p-1 !text-[10px] !rounded" @click="quickAdjustNestedStock(type, 1)">+1</button>
+                                  <button class="btn btn-o !p-1 !text-[10px] !rounded" @click="quickAdjustNestedStock(type, 5)">+5</button>
+                                  <button class="btn btn-p !py-1 !px-2.5 !text-[10px]" @click="openStockModal(type)">Set Stock</button>
+                                </div>
+                              </div>
+                            </template>
+                          </div>
+                        </div>
+
+                        <!-- Subproducts Table (Level 3 - Separate Stock for Each Part) -->
+                        <template x-if="type.hasSubProducts">
+                          <table class="tbl w-full !text-[11px]">
+                            <thead>
+                              <tr class="!bg-neutral-50 text-neutral-500">
+                                <th class="w-10 !py-1.5"></th>
+                                <th class="!py-1.5">Option / Size / Style</th>
+                                <th class="!py-1.5">Price</th>
+                                <th class="!py-1.5">Separate Stock</th>
+                                <th class="!py-1.5">Stock Status</th>
+                                <th class="!py-1.5">Last Updated</th>
+                                <th class="text-right !py-1.5">Manage Stock</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <template x-for="sub in type.subProducts" :key="sub.key">
+                                <tr class="hover:bg-neutral-50/70">
+                                  <!-- Sub Thumbnail -->
+                                  <td class="!py-2">
+                                    <img 
+                                      :src="sub.imageSrc || type.imageSrc || product.imageSrc || 'https://placehold.co/60x60/e2e8f0/64748b?text=Sub'" 
+                                      class="w-7 h-7 rounded object-cover bg-neutral-100 border border-neutral-200"
+                                      onerror="this.src='https://placehold.co/60x60/e2e8f0/64748b?text=Sub'"
+                                    >
+                                  </td>
+
+                                  <!-- Sub Title & Sub ID -->
+                                  <td class="!py-2">
+                                    <div class="font-bold text-neutral-900" x-text="sub.title"></div>
+                                    <div class="text-[9px] mono text-neutral-400" x-text="'Sub ID: ' + sub.subProductId"></div>
+                                  </td>
+
+                                  <!-- Price -->
+                                  <td class="!py-2 font-bold text-neutral-800" x-text="'BDT ' + fmtNum(sub.price)"></td>
+
+                                  <!-- Separate Stock for this part -->
+                                  <td class="!py-2">
+                                    <span class="text-xs font-black mono" :class="sub.stock <= 0 ? 'text-red-600' : (sub.stock <= 5 ? 'text-amber-600' : 'text-neutral-900')" x-text="sub.stock"></span>
+                                  </td>
+
+                                  <!-- Stock Status -->
+                                  <td class="!py-2">
+                                    <span 
+                                      class="badge uppercase text-[9px] !py-0.5 !px-2" 
+                                      :class="sub.stock <= 0 ? '!bg-red-50 !text-red-700 !border-red-200' : (sub.stock <= 5 ? '!bg-amber-50 !text-amber-700 !border-amber-200' : '!bg-emerald-50 !text-emerald-700 !border-emerald-200')"
+                                      x-text="sub.stock <= 0 ? 'Out of Stock' : (sub.stock <= 5 ? 'Low Stock' : 'In Stock')"
+                                    ></span>
+                                  </td>
+
+                                  <!-- Last Updated -->
+                                  <td class="!py-2 text-[10px] text-neutral-400" x-text="fmtDate(sub.updatedAt)"></td>
+
+                                  <!-- Separate Stock Controls -->
+                                  <td class="!py-2 text-right whitespace-nowrap">
+                                    <div class="inline-flex items-center gap-1">
+                                      <button 
+                                        class="btn btn-o !p-1 !text-[9px] !rounded" 
+                                        title="Decrease stock by 1"
+                                        :disabled="sub.stock <= 0"
+                                        @click="quickAdjustNestedStock(sub, -1)"
+                                      >-1</button>
+                                      <button 
+                                        class="btn btn-o !p-1 !text-[9px] !rounded" 
+                                        title="Increase stock by 1"
+                                        @click="quickAdjustNestedStock(sub, 1)"
+                                      >+1</button>
+                                      <button 
+                                        class="btn btn-o !p-1 !text-[9px] !rounded" 
+                                        title="Increase stock by 5"
+                                        @click="quickAdjustNestedStock(sub, 5)"
+                                      >+5</button>
+                                      <button 
+                                        class="btn btn-p !py-1 !px-2.5 !text-[9px]" 
+                                        @click="openStockModal(sub)"
+                                      >Set Stock</button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              </template>
+                            </tbody>
+                          </table>
+                        </template>
+                      </div>
+                    </template>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+
+        <div x-show="filteredNestedProducts.length === 0" class="text-center py-16 text-neutral-400">
+          <p class="text-xs font-bold uppercase tracking-wider">No products matched your filter or search.</p>
+        </div>
+      </div>
+
+      <!-- ==================================================== -->
+      <!-- 2. FLAT SKU LIST TABLE (Alternative View Mode)       -->
+      <!-- Displays all individual SKUs with the 2 new columns   -->
+      <!-- ==================================================== -->
+      <div x-show="viewMode === 'flat'" class="card overflow-x-auto shadow-sm">
+        <table class="tbl min-w-[1100px]">
           <thead>
             <tr>
               <th class="w-12">Item</th>
               <th>Product Information</th>
+              <th>Product Page</th>
+              <th>Tab</th>
               <th>Type (Variant)</th>
               <th>Subproduct</th>
               <th>Catalog Price</th>
@@ -347,6 +714,34 @@
                   </template>
                 </td>
 
+                <!-- Product Page Link (NEW 1) -->
+                <td>
+                  <template x-if="item.productUrl">
+                    <a 
+                      :href="item.productUrl" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-md border border-blue-200 transition-colors group"
+                      title="Open storefront product page"
+                    >
+                      <span class="mono text-[10px] font-bold">/<span x-text="item.slug"></span></span>
+                      <svg class="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    </a>
+                  </template>
+                  <template x-if="!item.productUrl">
+                    <span class="text-neutral-400 text-xs">—</span>
+                  </template>
+                </td>
+
+                <!-- Tab (NEW 2) -->
+                <td>
+                  <span 
+                    class="badge uppercase font-bold text-[10px]" 
+                    :class="getTabBadgeClass(item.tab)"
+                    x-text="item.tab || '—'"
+                  ></span>
+                </td>
+
                 <!-- Type Name & ID -->
                 <td>
                   <div class="font-semibold text-xs" x-text="item.typeTitle || '—'"></div>
@@ -362,7 +757,7 @@
                 <!-- Price from Catalog -->
                 <td class="font-bold text-xs" x-text="'BDT ' + fmtNum(item.price)"></td>
 
-                <!-- Current Stock in MongoDB -->
+                <!-- Current Stock in MongoDB (Separate Stock) -->
                 <td>
                   <div class="text-sm font-black mono" :class="item.stock <= 0 ? 'text-red-600' : (item.stock <= 5 ? 'text-amber-600' : 'text-neutral-900')" x-text="item.stock"></div>
                 </td>
@@ -549,11 +944,16 @@
 
         // Inventory state
         inventory: [],
+        nestedProducts: [],
+        orphanedItems: [],
         invSummary: { total: 0, inStock: 0, lowStock: 0, outOfStock: 0, unmatched: 0 },
         loadingInventory: false,
         syncingInventory: false,
         invSearch: '',
         invFilter: 'all',
+        invTabFilter: 'all',
+        viewMode: 'nested', // 'nested' (default) or 'flat'
+        expandedProducts: {},
 
         // Modals
         syncModal: {
@@ -597,6 +997,33 @@
           this.fetchPendingOrdersCount();
         },
 
+        // Expand / Collapse controls
+        toggleExpand(productId) {
+          this.expandedProducts[productId] = !this.isExpanded(productId);
+        },
+
+        isExpanded(productId) {
+          return this.expandedProducts[productId] === undefined ? true : !!this.expandedProducts[productId];
+        },
+
+        expandAll() {
+          for (const p of this.nestedProducts) {
+            this.expandedProducts[p.productId] = true;
+          }
+        },
+
+        collapseAll() {
+          for (const p of this.nestedProducts) {
+            this.expandedProducts[p.productId] = false;
+          }
+        },
+
+        getStockStatus(stock) {
+          if (typeof stock !== 'number' || stock <= 0) return 'out_of_stock';
+          if (stock <= 5) return 'low_stock';
+          return 'in_stock';
+        },
+
         async checkStatus(manual = false) {
           this.loadingStatus = true;
           try {
@@ -634,6 +1061,8 @@
             const data = await res.json();
             if (data && data.success) {
               this.inventory = data.items || [];
+              this.nestedProducts = data.nestedProducts || [];
+              this.orphanedItems = data.orphanedItems || [];
               this.invSummary = data.summary || {
                 total: this.inventory.length,
                 inStock: this.inventory.filter(i => i.stock > 5).length,
@@ -642,7 +1071,7 @@
                 unmatched: this.inventory.filter(i => i.unmatched).length,
               };
               this.dbConnected = true;
-              if (notify) this.showToast(`Loaded ${this.inventory.length} inventory records from MongoDB.`);
+              if (notify) this.showToast(`Loaded ${this.nestedProducts.length} products (${this.inventory.length} inventory records) from MongoDB.`);
             } else {
               this.showToast(data.error || 'Failed to fetch inventory', 'error');
             }
@@ -735,26 +1164,83 @@
           await this.modifyStockApi(item, action, Math.abs(delta));
         },
 
+        async quickAdjustNestedStock(item, delta) {
+          const action = delta >= 0 ? 'increase' : 'decrease';
+          await this.modifyStockApi(item, action, Math.abs(delta));
+        },
+
         async modifyStockApi(item, action, value) {
           try {
+            const pId = String(item.productId || '').trim();
+            const tId = item.typeId === null || item.typeId === undefined || item.typeId === 'null' || item.typeId === '' ? null : String(item.typeId).trim();
+            const sId = item.subProductId === null || item.subProductId === undefined || item.subProductId === 'null' || item.subProductId === '' ? null : String(item.subProductId).trim();
+
             const res = await fetch('/api/inventory', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                productId: item.productId,
-                typeId: item.typeId,
-                subProductId: item.subProductId,
+                productId: pId,
+                typeId: tId,
+                subProductId: sId,
                 action,
                 value
               })
             });
             const data = await res.json();
             if (data && data.success) {
-              item.stock = data.stock;
-              item.updatedAt = data.updatedAt;
-              item.status = data.stock <= 0 ? 'out_of_stock' : (data.stock <= 5 ? 'low_stock' : 'in_stock');
+              const newStock = data.stock;
+              const newStatus = this.getStockStatus(newStock);
+              const updatedAt = data.updatedAt || new Date().toISOString();
+
+              // Update the target item object directly
+              item.stock = newStock;
+              item.updatedAt = updatedAt;
+              item.status = newStatus;
+
+              // 1. Sync in Flat inventory array
+              const itemKey = `${pId}:::${tId || 'null'}:::${sId || 'null'}`;
+              const flatItem = this.inventory.find(i => i.key === itemKey);
+              if (flatItem) {
+                flatItem.stock = newStock;
+                flatItem.updatedAt = updatedAt;
+                flatItem.status = newStatus;
+              }
+
+              // 2. Sync in Nested Products structure & update parent aggregates
+              const pMatch = this.nestedProducts.find(p => p.productId === pId);
+              if (pMatch) {
+                if (!pMatch.hasTypes) {
+                  pMatch.stock = newStock;
+                  pMatch.totalStock = newStock;
+                  pMatch.status = newStatus;
+                  pMatch.updatedAt = updatedAt;
+                } else {
+                  const tMatch = pMatch.types.find(t => t.typeId === tId);
+                  if (tMatch) {
+                    if (!tMatch.hasSubProducts) {
+                      tMatch.stock = newStock;
+                      tMatch.totalStock = newStock;
+                      tMatch.status = newStatus;
+                      tMatch.updatedAt = updatedAt;
+                    } else {
+                      const sMatch = tMatch.subProducts.find(s => s.subProductId === sId);
+                      if (sMatch) {
+                        sMatch.stock = newStock;
+                        sMatch.status = newStatus;
+                        sMatch.updatedAt = updatedAt;
+                      }
+                      tMatch.totalStock = tMatch.subProducts.reduce((sum, s) => sum + (s.stock || 0), 0);
+                      tMatch.status = this.getStockStatus(tMatch.totalStock);
+                    }
+                  }
+                  pMatch.totalStock = pMatch.types.reduce((sum, t) => sum + (t.totalStock || 0), 0);
+                  pMatch.status = this.getStockStatus(pMatch.totalStock);
+                }
+              }
+
               this.recalcSummary();
-              this.showToast(`Stock updated: ${item.productTitle} is now ${data.stock}`);
+              const displayTitle = item.displayName || item.title || item.productTitle || pId;
+              this.showToast(`Stock updated: ${displayTitle} is now ${newStock}`);
             } else {
               const errMsg = data.error === 'INSUFFICIENT_STOCK' 
                 ? (data.message || 'Cannot decrease stock below zero.')
@@ -779,7 +1265,15 @@
 
         get filteredInventory() {
           const q = (this.invSearch || '').toLowerCase().trim();
+          const tabFilter = this.invTabFilter || 'all';
+
           return this.inventory.filter(item => {
+            // Tab filter
+            if (tabFilter !== 'all' && (item.tab || 'normal').toLowerCase() !== tabFilter.toLowerCase()) {
+              return false;
+            }
+
+            // Stock status filter
             if (this.invFilter === 'in_stock' && item.stock <= 5) return false;
             if (this.invFilter === 'low_stock' && (item.stock <= 0 || item.stock > 5)) return false;
             if (this.invFilter === 'out_of_stock' && item.stock > 0) return false;
@@ -792,11 +1286,92 @@
               const tId = (item.typeId || '').toLowerCase();
               const sTitle = (item.subTitle || '').toLowerCase();
               const sId = (item.subProductId || '').toLowerCase();
-              const match = pTitle.includes(q) || pId.includes(q) || tTitle.includes(q) || tId.includes(q) || sTitle.includes(q) || sId.includes(q);
+              const slug = (item.slug || '').toLowerCase();
+              const tab = (item.tab || '').toLowerCase();
+              const match = pTitle.includes(q) || pId.includes(q) || tTitle.includes(q) || tId.includes(q) || sTitle.includes(q) || sId.includes(q) || slug.includes(q) || tab.includes(q);
               if (!match) return false;
             }
             return true;
           });
+        },
+
+        get filteredNestedProducts() {
+          const q = (this.invSearch || '').toLowerCase().trim();
+          const tabFilter = this.invTabFilter || 'all';
+          const statusFilter = this.invFilter || 'all';
+
+          return this.nestedProducts.filter(prod => {
+            // 1. Tab filter
+            if (tabFilter !== 'all' && (prod.tab || 'normal').toLowerCase() !== tabFilter.toLowerCase()) {
+              return false;
+            }
+
+            // 2. Stock status filter
+            if (statusFilter === 'in_stock' && prod.totalStock <= 5) return false;
+            if (statusFilter === 'low_stock' && (prod.totalStock <= 0 || prod.totalStock > 5)) return false;
+            if (statusFilter === 'out_of_stock' && prod.totalStock > 0) return false;
+            if (statusFilter === 'unmatched') return false;
+
+            // 3. Search query
+            if (q) {
+              const pTitle = (prod.title || '').toLowerCase();
+              const pId = (prod.productId || '').toLowerCase();
+              const slug = (prod.slug || '').toLowerCase();
+              const tab = (prod.tab || '').toLowerCase();
+
+              let matchesChild = false;
+              if (prod.types && prod.types.length > 0) {
+                for (const type of prod.types) {
+                  const tTitle = (type.title || '').toLowerCase();
+                  const tId = (type.typeId || '').toLowerCase();
+                  if (tTitle.includes(q) || tId.includes(q)) {
+                    matchesChild = true;
+                    break;
+                  }
+                  if (type.subProducts && type.subProducts.length > 0) {
+                    for (const sub of type.subProducts) {
+                      const sTitle = (sub.title || '').toLowerCase();
+                      const sId = (sub.subProductId || '').toLowerCase();
+                      if (sTitle.includes(q) || sId.includes(q)) {
+                        matchesChild = true;
+                        break;
+                      }
+                    }
+                  }
+                  if (matchesChild) break;
+                }
+              }
+
+              if (!pTitle.includes(q) && !pId.includes(q) && !slug.includes(q) && !tab.includes(q) && !matchesChild) {
+                return false;
+              }
+            }
+
+            return true;
+          });
+        },
+
+        get availableTabs() {
+          const tabs = new Set();
+          if (Array.isArray(this.nestedProducts)) {
+            for (const p of this.nestedProducts) {
+              if (p.tab && String(p.tab).trim()) tabs.add(String(p.tab).trim());
+            }
+          }
+          if (Array.isArray(this.inventory)) {
+            for (const i of this.inventory) {
+              if (i.tab && String(i.tab).trim()) tabs.add(String(i.tab).trim());
+            }
+          }
+          return Array.from(tabs).sort();
+        },
+
+        getTabBadgeClass(tab) {
+          if (!tab) return '!bg-neutral-100 !text-neutral-500 !border-neutral-200';
+          const t = String(tab).toLowerCase().trim();
+          if (t === 'gadget') return '!bg-purple-100 !text-purple-800 !border-purple-300';
+          if (t === 'normal') return '!bg-slate-100 !text-slate-800 !border-slate-300';
+          return '!bg-neutral-100 !text-neutral-800 !border-neutral-300';
         },
 
         fmtNum(val) {

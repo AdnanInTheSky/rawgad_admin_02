@@ -1,11 +1,16 @@
 // api/_catalog.js
-// Fetches & parses the product catalog from https://lit-alpha-five.vercel.app/products.json
+// Fetches & parses the live product catalog from remote CATALOG_URL
 // Single source of truth for product information (names, images, prices, types, subProducts)
 
-const fs = require("fs");
-const path = require("path");
+const CATALOG_URL = process.env.CATALOG_URL || "https://notun-rawgadz.vercel.app/products.json";
 
-const CATALOG_URL = "https://lit-alpha-five.vercel.app/products.json";
+function getStoreBaseUrl() {
+  try {
+    return new URL(CATALOG_URL).origin;
+  } catch (_) {
+    return "https://notun-rawgadz.vercel.app";
+  }
+}
 
 let cachedCatalog = null;
 let lastFetchTime = 0;
@@ -31,7 +36,8 @@ function normalizeId(val) {
 }
 
 /**
- * Fetches the raw products array from the public URL, with local fallback if offline.
+ * Fetches the live raw products array directly from the remote URL.
+ * Real, live data with no local file fallbacks.
  * @param {boolean} forceFresh - bypass cache if true
  */
 async function fetchRawProducts(forceFresh = false) {
@@ -40,8 +46,10 @@ async function fetchRawProducts(forceFresh = false) {
     return cachedCatalog;
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+
   try {
-    const controller = new AbortController();
     const fetchOptions = {
       signal: controller.signal,
       headers: {
@@ -55,47 +63,26 @@ async function fetchRawProducts(forceFresh = false) {
     const res = await fetch(fetchUrl, fetchOptions);
 
     if (!res.ok) {
-      throw new Error(`Failed to fetch catalog: HTTP ${res.status}`);
+      throw new Error(`Failed to fetch live catalog from ${CATALOG_URL}: HTTP ${res.status}`);
     }
 
     const data = await res.json();
-    if (Array.isArray(data)) {
-      cachedCatalog = data;
-      lastFetchTime = now;
-      return data;
+    if (!Array.isArray(data)) {
+      throw new Error(`Invalid catalog data received from ${CATALOG_URL}: expected array of products`);
     }
+
+    cachedCatalog = data;
+    lastFetchTime = now;
+    return data;
   } catch (err) {
-    console.warn("[_catalog.js] Failed fetching remote products.json:", err.message);
+    if (cachedCatalog) {
+      console.warn("[_catalog.js] Live fetch failed, using active in-memory cache:", err.message);
+      return cachedCatalog;
+    }
+    throw new Error(`Unable to fetch live catalog from ${CATALOG_URL}: ${err.message}`);
+  } finally {
+    clearTimeout(timeout);
   }
-
-  // Fallback 1: Return stale cache if available
-  if (cachedCatalog) {
-    return cachedCatalog;
-  }
-
-  // Fallback 2: Check local fallback files if available
-  const localCandidates = [
-    path.join(__dirname, "products.json"),
-    path.join(process.cwd(), "products.json"),
-    path.join(process.cwd(), "..", "final_public", "products.json")
-  ];
-
-  for (const candidate of localCandidates) {
-    try {
-      if (fs.existsSync(candidate)) {
-        const raw = fs.readFileSync(candidate, "utf8");
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          console.log(`[_catalog.js] Loaded fallback catalog from ${candidate}`);
-          cachedCatalog = parsed;
-          lastFetchTime = now;
-          return parsed;
-        }
-      }
-    } catch (_) {}
-  }
-
-  return [];
 }
 
 /**
@@ -113,13 +100,24 @@ async function fetchRawProducts(forceFresh = false) {
  *         typeId = null
  *         subProductId = null
  */
+function getStockStatus(stock) {
+  if (typeof stock !== "number" || stock <= 0) return "out_of_stock";
+  if (stock <= 5) return "low_stock";
+  return "in_stock";
+}
+
 function extractPurchasableItems(products) {
   const items = [];
   if (!Array.isArray(products)) return items;
+  const storeBaseUrl = getStoreBaseUrl();
 
   for (const product of products) {
     const productId = String(product.id ?? "").trim();
     if (!productId) continue;
+
+    const slug = String(product.slug || "").trim();
+    const tab = String(product.tab || "").trim();
+    const productUrl = slug ? `${storeBaseUrl}/product/${slug}` : "";
 
     const types = Array.isArray(product.types) ? product.types : [];
 
@@ -137,6 +135,9 @@ function extractPurchasableItems(products) {
         price: Number(product.price) || 0,
         imageSrc: product.imageSrc || "",
         tags: product.tags || "",
+        slug,
+        tab,
+        productUrl,
       });
       continue;
     }
@@ -164,6 +165,9 @@ function extractPurchasableItems(products) {
             price: itemPrice,
             imageSrc: itemImage,
             tags: product.tags || "",
+            slug,
+            tab,
+            productUrl,
           });
         }
       } else {
@@ -183,12 +187,184 @@ function extractPurchasableItems(products) {
           price: itemPrice,
           imageSrc: itemImage,
           tags: product.tags || "",
+          slug,
+          tab,
+          productUrl,
         });
       }
     }
   }
 
   return items;
+}
+
+/**
+ * Builds a hierarchical nested representation of the products catalog with live stock information.
+ * Each part (subProduct, type, or standalone product) maintains its own separate stock.
+ * Aggregates are computed for parent types and products.
+ *
+ * @param {Array} products - Raw products from products.json
+ * @param {Map} stockMap - Map of key (makeKey) -> { stock, updatedAt, createdAt }
+ */
+function buildNestedCatalog(products, stockMap = new Map()) {
+  if (!Array.isArray(products)) return [];
+  const storeBaseUrl = getStoreBaseUrl();
+
+  return products.map((product) => {
+    const productId = String(product.id ?? "").trim();
+    const slug = String(product.slug || "").trim();
+    const tab = String(product.tab || "").trim();
+    const productUrl = slug ? `${storeBaseUrl}/product/${slug}` : "";
+    const types = Array.isArray(product.types) ? product.types : [];
+
+    if (types.length === 0) {
+      // Standalone product (no types/variants): the product itself is the stockable item
+      const key = makeKey(productId, null, null);
+      const stockDoc = stockMap.get(key);
+      const stock = stockDoc && typeof stockDoc.stock === "number" ? Math.max(0, stockDoc.stock) : 0;
+      const status = getStockStatus(stock);
+
+      return {
+        key,
+        productId,
+        typeId: null,
+        subProductId: null,
+        title: product.title || "Untitled Product",
+        productTitle: product.title || "Untitled Product",
+        slug,
+        tab,
+        productUrl,
+        imageSrc: product.imageSrc || "",
+        description: product.description || "",
+        price: Number(product.price) || 0,
+        tags: product.tags || "",
+        hasTypes: false,
+        hasSubProducts: false,
+        totalVariants: 0,
+        stock,
+        totalStock: stock,
+        status,
+        updatedAt: stockDoc ? (stockDoc.updatedAt || stockDoc.updated_at || stockDoc.createdAt) : null,
+        types: [],
+      };
+    }
+
+    // Product has nested types
+    let productTotalStock = 0;
+    let totalVariants = 0;
+
+    const mappedTypes = types.map((type) => {
+      const typeId = String(type.subProductId || type.id || "").trim();
+      const subProducts = Array.isArray(type.subProducts) ? type.subProducts : [];
+      let typeTotalStock = 0;
+
+      if (subProducts.length > 0) {
+        // Type has nested subProducts: each subProduct has its OWN separate stock
+        const mappedSubs = subProducts.map((sub) => {
+          totalVariants++;
+          const subProductId = String(sub.subProductId || sub.id || "").trim();
+          const key = makeKey(productId, typeId, subProductId);
+          const stockDoc = stockMap.get(key);
+          const stock = stockDoc && typeof stockDoc.stock === "number" ? Math.max(0, stockDoc.stock) : 0;
+          typeTotalStock += stock;
+          const status = getStockStatus(stock);
+
+          const itemPrice = typeof sub.price === "number" ? sub.price : (typeof type.price === "number" ? type.price : Number(product.price) || 0);
+          const itemImage = sub.subImage || type.subImage || product.imageSrc || "";
+
+          return {
+            key,
+            productId,
+            typeId,
+            subProductId,
+            title: sub.subTitle || "Default Subproduct",
+            subTitle: sub.subTitle || "Default Subproduct",
+            typeTitle: type.subTitle || "Default Type",
+            productTitle: product.title || "Untitled Product",
+            displayName: `${product.title} - ${type.subTitle || "Type"} (${sub.subTitle || "Option"})`,
+            price: itemPrice,
+            imageSrc: itemImage,
+            stock, // SEPARATE STOCK FOR THIS SUBPRODUCT
+            status,
+            slug,
+            tab,
+            productUrl,
+            updatedAt: stockDoc ? (stockDoc.updatedAt || stockDoc.updated_at || stockDoc.createdAt) : null,
+          };
+        });
+
+        productTotalStock += typeTotalStock;
+
+        return {
+          typeId,
+          title: type.subTitle || "Default Type",
+          typeTitle: type.subTitle || "Default Type",
+          productTitle: product.title || "Untitled Product",
+          price: typeof type.price === "number" ? type.price : Number(product.price) || 0,
+          imageSrc: type.subImage || product.imageSrc || "",
+          hasSubProducts: true,
+          totalVariants: mappedSubs.length,
+          totalStock: typeTotalStock,
+          status: getStockStatus(typeTotalStock),
+          subProducts: mappedSubs,
+        };
+      } else {
+        // Type has NO nested subProducts: the type itself has its OWN separate stock
+        totalVariants++;
+        const key = makeKey(productId, typeId, null);
+        const stockDoc = stockMap.get(key);
+        const stock = stockDoc && typeof stockDoc.stock === "number" ? Math.max(0, stockDoc.stock) : 0;
+        typeTotalStock += stock;
+        productTotalStock += stock;
+        const status = getStockStatus(stock);
+
+        const itemPrice = typeof type.price === "number" ? type.price : Number(product.price) || 0;
+        const itemImage = type.subImage || product.imageSrc || "";
+
+        return {
+          key,
+          productId,
+          typeId,
+          subProductId: null,
+          title: type.subTitle || "Default Type",
+          typeTitle: type.subTitle || "Default Type",
+          productTitle: product.title || "Untitled Product",
+          displayName: `${product.title} - ${type.subTitle || "Type"}`,
+          price: itemPrice,
+          imageSrc: itemImage,
+          hasSubProducts: false,
+          totalVariants: 1,
+          stock, // SEPARATE STOCK FOR THIS TYPE
+          totalStock: stock,
+          status,
+          slug,
+          tab,
+          productUrl,
+          updatedAt: stockDoc ? (stockDoc.updatedAt || stockDoc.updated_at || stockDoc.createdAt) : null,
+          subProducts: [],
+        };
+      }
+    });
+
+    return {
+      productId,
+      title: product.title || "Untitled Product",
+      productTitle: product.title || "Untitled Product",
+      slug,
+      tab,
+      productUrl,
+      imageSrc: product.imageSrc || "",
+      description: product.description || "",
+      price: Number(product.price) || 0,
+      tags: product.tags || "",
+      hasTypes: true,
+      hasSubProducts: mappedTypes.some((t) => t.hasSubProducts),
+      totalVariants,
+      totalStock: productTotalStock,
+      status: getStockStatus(productTotalStock),
+      types: mappedTypes,
+    };
+  });
 }
 
 /**
@@ -206,9 +382,12 @@ async function getPurchasableCatalogMap(forceFresh = false) {
 
 module.exports = {
   CATALOG_URL,
+  getStoreBaseUrl,
   makeKey,
   normalizeId,
+  getStockStatus,
   fetchRawProducts,
   extractPurchasableItems,
+  buildNestedCatalog,
   getPurchasableCatalogMap,
 };

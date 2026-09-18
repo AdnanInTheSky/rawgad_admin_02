@@ -98,6 +98,9 @@ module.exports = async function handler(req, res) {
             qty,
             subtotal,
             imageSrc: (cat ? cat.imageSrc : item.imageSrc) || "",
+            slug: cat ? cat.slug : (item.slug || ""),
+            tab: cat ? cat.tab : (item.tab || ""),
+            productUrl: cat ? (cat.productUrl || "") : "",
           };
         });
 

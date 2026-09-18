@@ -6,13 +6,7 @@
 
 const { setCors, parseBody, ok, badRequest, serverError } = require("./_lib");
 const { getInventoryCollection, getOrdersCollection, getDb } = require("./_db");
-const { getPurchasableCatalogMap, makeKey, normalizeId, CATALOG_URL } = require("./_catalog");
-
-function getStockStatus(stock) {
-  if (typeof stock !== "number" || stock <= 0) return "out_of_stock";
-  if (stock <= 5) return "low_stock";
-  return "in_stock";
-}
+const { getPurchasableCatalogMap, makeKey, normalizeId, CATALOG_URL, getStoreBaseUrl, buildNestedCatalog, getStockStatus } = require("./_catalog");
 
 module.exports = async function handler(req, res) {
   setCors(req, res);
@@ -53,8 +47,17 @@ module.exports = async function handler(req, res) {
         .sort({ productId: 1, typeId: 1, subProductId: 1 })
         .toArray();
 
-      // Fetch public catalog from https://lit-alpha-five.vercel.app/products.json
-      const { map: catalogMap, items: catalogItems } = await getPurchasableCatalogMap(req.query?.fresh === "true");
+      // Fetch public catalog from https://notun-rawgadz.vercel.app/products.json
+      const { map: catalogMap, items: catalogItems, products: rawCatalogProducts } = await getPurchasableCatalogMap(req.query?.fresh === "true");
+
+      // Build stockMap for quick lookup
+      const stockMap = new Map();
+      for (const doc of inventoryDocs) {
+        const pId = String(doc.productId ?? "").trim();
+        const tId = normalizeId(doc.typeId);
+        const sId = normalizeId(doc.subProductId);
+        stockMap.set(makeKey(pId, tId, sId), doc);
+      }
 
       let inStockCount = 0;
       let lowStockCount = 0;
@@ -79,6 +82,11 @@ module.exports = async function handler(req, res) {
         const isOrphaned = !catalogInfo;
         if (isOrphaned) orphanedCount++;
 
+        const slug = catalogInfo ? catalogInfo.slug : (doc.slug || "");
+        const tab = catalogInfo ? catalogInfo.tab : (doc.tab || "");
+        const storeBaseUrl = getStoreBaseUrl();
+        const productUrl = slug ? `${storeBaseUrl}/product/${slug}` : "";
+
         return {
           _id: String(doc._id),
           key,
@@ -96,10 +104,17 @@ module.exports = async function handler(req, res) {
           price: catalogInfo ? catalogInfo.price : 0,
           imageSrc: catalogInfo ? catalogInfo.imageSrc : "",
           tags: catalogInfo ? catalogInfo.tags : "",
+          slug,
+          tab,
+          productUrl,
           createdAt: doc.createdAt || null,
           updatedAt: doc.updatedAt || doc.updated_at || doc.createdAt || null,
         };
       });
+
+      // Build hierarchical nested structure
+      const nestedProducts = buildNestedCatalog(rawCatalogProducts, stockMap);
+      const orphanedItems = mergedItems.filter(i => i.orphaned);
 
       return ok(res, {
         connected: true,
@@ -114,6 +129,8 @@ module.exports = async function handler(req, res) {
           orphaned: orphanedCount,
         },
         items: mergedItems,
+        nestedProducts,
+        orphanedItems,
       });
     } catch (err) {
       return serverError(res, err);
