@@ -494,7 +494,7 @@
                       class="btn btn-o !py-1 !px-2.5 !text-[10px]" 
                       @click="toggleExpand(product.productId)"
                     >
-                      <span x-text="isExpanded(product.productId) ? 'Hide Variants ▲' : 'View Variants (' + product.totalVariants + ') ▼'"></span>
+                      <span x-text="isExpanded(product.productId) ? 'Hide Variants ▲' : 'View Variants (' + product.types.reduce((acc, t) => acc + (t.subProducts ? t.subProducts.length : 1), 0) + ') ▼'"></span>
                     </button>
                   </template>
                   <template x-if="!product.hasTypes">
@@ -591,7 +591,7 @@
                               </tr>
                             </thead>
                             <tbody>
-                              <template x-for="sub in type.subProducts" :key="sub.key">
+                              <template x-for="sub in type.subProducts" :key="sub.subProductId">
                                 <tr class="hover:bg-neutral-50/70">
                                   <!-- Sub Thumbnail -->
                                   <td class="!py-2">
@@ -1054,6 +1054,134 @@
           } catch (_) {}
         },
 
+        // =========================================================
+        // NEW: Build nested structure dynamically from flat SKU list
+        // =========================================================
+        buildNestedProducts() {
+          const productMap = new Map();
+
+          for (const item of this.inventory) {
+            // Group by productId to ensure accurate nesting of the same product
+            const pId = String(item.productId || '').trim();
+            if (!pId) continue;
+
+            if (!productMap.has(pId)) {
+              productMap.set(pId, {
+                productId: pId,
+                title: item.productTitle || 'Unknown Product',
+                imageSrc: item.imageSrc || '',
+                productUrl: item.productUrl || '',
+                slug: item.slug || '',
+                tab: item.tab || 'normal',
+                price: item.price || 0,
+                hasTypes: false,
+                totalStock: 0,
+                stock: 0,
+                status: 'in_stock',
+                updatedAt: item.updatedAt,
+                typesMap: new Map()
+              });
+            }
+            
+            const product = productMap.get(pId);
+            product.totalStock += (item.stock || 0);
+            if (item.updatedAt) product.updatedAt = item.updatedAt;
+
+            const tId = String(item.typeId || '').trim();
+            const hasType = tId && tId !== 'null' && tId !== '';
+
+            if (hasType) {
+              product.hasTypes = true;
+              if (!product.typesMap.has(tId)) {
+                product.typesMap.set(tId, {
+                  typeId: tId,
+                  title: item.typeTitle || 'Unknown Type',
+                  imageSrc: item.imageSrc || product.imageSrc,
+                  price: item.price || product.price,
+                  hasSubProducts: false,
+                  totalStock: 0,
+                  stock: 0,
+                  status: 'in_stock',
+                  updatedAt: item.updatedAt,
+                  subProductsMap: new Map()
+                });
+              }
+              
+              const type = product.typesMap.get(tId);
+              type.totalStock += (item.stock || 0);
+              if (item.updatedAt) type.updatedAt = item.updatedAt;
+
+              const sId = String(item.subProductId || '').trim();
+              const hasSub = sId && sId !== 'null' && sId !== '';
+
+              if (hasSub) {
+                type.hasSubProducts = true;
+                if (!type.subProductsMap.has(sId)) {
+                  type.subProductsMap.set(sId, {
+                    subProductId: sId,
+                    title: item.subTitle || 'Unknown Option',
+                    imageSrc: item.imageSrc || type.imageSrc,
+                    price: item.price || type.price,
+                    stock: item.stock || 0,
+                    status: this.getStockStatus(item.stock),
+                    updatedAt: item.updatedAt
+                  });
+                } else {
+                  // Aggregate stock if duplicate subProductId exists
+                  const sub = type.subProductsMap.get(sId);
+                  sub.stock += (item.stock || 0);
+                  sub.status = this.getStockStatus(sub.stock);
+                  if (item.updatedAt) sub.updatedAt = item.updatedAt;
+                }
+              } else {
+                // Type itself holds the stock (no subproducts)
+                type.stock += (item.stock || 0);
+                type.status = this.getStockStatus(type.stock);
+              }
+            } else {
+              // Standalone product (no types)
+              product.stock += (item.stock || 0);
+              product.status = this.getStockStatus(product.totalStock);
+            }
+          }
+
+          // Convert maps to clean arrays for Alpine.js reactivity
+          this.nestedProducts = Array.from(productMap.values()).map(p => {
+            const types = Array.from(p.typesMap.values()).map(t => {
+              const subProducts = t.hasSubProducts ? Array.from(t.subProductsMap.values()) : [];
+              return {
+                typeId: t.typeId,
+                title: t.title,
+                imageSrc: t.imageSrc,
+                price: t.price,
+                hasSubProducts: t.hasSubProducts,
+                totalStock: t.totalStock,
+                status: this.getStockStatus(t.totalStock),
+                stock: t.stock,
+                updatedAt: t.updatedAt,
+                subProducts: subProducts
+              };
+            });
+
+            return {
+              productId: p.productId,
+              title: p.title,
+              imageSrc: p.imageSrc,
+              productUrl: p.productUrl,
+              slug: p.slug,
+              tab: p.tab,
+              price: p.price,
+              hasTypes: p.hasTypes,
+              totalStock: p.totalStock,
+              totalVariants: types.reduce((acc, t) => acc + (t.subProducts ? t.subProducts.length : 1), 0),
+              status: this.getStockStatus(p.totalStock),
+              stock: p.stock,
+              updatedAt: p.updatedAt,
+              types: types
+            };
+          });
+        },
+
         async fetchInventory(notify = false) {
           this.loadingInventory = true;
           try {
@@ -1061,15 +1189,12 @@
             const data = await res.json();
             if (data && data.success) {
               this.inventory = data.items || [];
-              this.nestedProducts = data.nestedProducts || [];
+              
+              // Build nested structure dynamically from the flat list
+              this.buildNestedProducts(); 
+              
               this.orphanedItems = data.orphanedItems || [];
-              this.invSummary = data.summary || {
-                total: this.inventory.length,
-                inStock: this.inventory.filter(i => i.stock > 5).length,
-                lowStock: this.inventory.filter(i => i.stock > 0 && i.stock <= 5).length,
-                outOfStock: this.inventory.filter(i => i.stock <= 0).length,
-                unmatched: this.inventory.filter(i => i.unmatched).length,
-              };
+              this.recalcSummary();
               this.dbConnected = true;
               if (notify) this.showToast(`Loaded ${this.nestedProducts.length} products (${this.inventory.length} inventory records) from MongoDB.`);
             } else {
@@ -1107,7 +1232,7 @@
                 ? `Inventory updated: ${added} new item(s) discovered and initialized with stock 0.`
                 : `Inventory up to date: all ${data.catalogCount || 0} catalog items exist in MongoDB.`;
               this.showToast(msg, 'success');
-              await this.fetchInventory();
+              await this.fetchInventory(); // This will now correctly rebuild the nested list
             } else {
               this.showToast(data.error || 'Synchronization failed.', 'error');
             }
